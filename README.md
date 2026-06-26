@@ -44,3 +44,11 @@ js/
 ```
 
 All data is in-memory and mutates live (add/edit/delete persist for the session); preferences persist to `localStorage`.
+
+## Persian (RTL) version
+
+A fully localized **Persian / فارسی** build lives in [`persian/`](persian/) — `dir="rtl"`, the **Vazirmatn** web font, Persian digits & currency (تومان), and the **Jalali (Shamsi) calendar** via the `fa-IR` `Intl` locale. It mirrors the English app exactly (same six pages, components and interactions) with a self-contained `persian/index.html`, `persian/styles.css` (original design system + an RTL override layer) and a translated `persian/js/` set.
+
+```bash
+python3 -m http.server 8000   # then visit http://localhost:8000/persian/
+```
