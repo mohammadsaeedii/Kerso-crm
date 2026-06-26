@@ -66,7 +66,7 @@
     return `<div class="brand">
         <span class="brand__mark" aria-hidden="true">${BRAND_MARK}</span>
         <span class="brand__name">Kerso</span>
-        <button class="brand__collapse" data-collapse aria-label="Collapse sidebar" data-tip="Toggle sidebar">${icon("sidebar", { size: 20 })}</button>
+        <button class="brand__collapse" data-collapse aria-label="${App.store.get("sidebar:collapsed", false) ? "Expand sidebar" : "Collapse sidebar"}" data-tip="Toggle sidebar">${icon("sidebar", { size: 20 })}</button>
       </div>
       <nav class="nav" aria-label="Primary">${NAV.map(item).join("")}</nav>
       <div class="nav nav--foot">${NAV_FOOT.map(item).join("")}</div>
@@ -317,9 +317,10 @@
   function wireGlobal() {
     const app = qs(".app");
     // sidebar collapse
-    on(document, "click", "[data-collapse]", () => {
+    on(document, "click", "[data-collapse]", (e, t) => {
       const collapsed = app.classList.toggle("app--collapsed");
       App.store.set("sidebar:collapsed", collapsed);
+      t.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
       window.dispatchEvent(new Event("resize"));
     });
     on(document, "click", "[data-burger]", openMobileNav);
