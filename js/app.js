@@ -44,15 +44,20 @@
 
   const NAV = [
     { id: "dashboard", label: "Dashboard", icon: "dashboard" },
+    { id: "workspace", label: "Workspace", icon: "layout" },
     { id: "explore", label: "Business Explore", icon: "explore" },
     { id: "analytics", label: "Analytics", icon: "analytics" },
     { id: "customers", label: "Customers", icon: "customers" },
     { id: "reviews", label: "Customer Reviews", icon: "reviews" },
+    { id: "automations", label: "Automations", icon: "zap" },
   ];
   const NAV_FOOT = [
+    { id: "marketplace", label: "Marketplace", icon: "store" },
     { id: "settings", label: "Settings", icon: "gear" },
     { id: "help", label: "Help & Support", icon: "help", action: "help" },
   ];
+  // expose the navigable pages so the enhanced sidebar & command palette stay in sync
+  App.navItems = NAV.slice();
 
   /* ---------------- Shell render ---------------- */
   function sidebarHTML() {
@@ -68,7 +73,7 @@
         <span class="brand__name">Kerso</span>
         <button class="brand__collapse" data-collapse aria-label="${App.store.get("sidebar:collapsed", false) ? "Expand sidebar" : "Collapse sidebar"}" data-tip="Toggle sidebar">${icon("sidebar", { size: 20 })}</button>
       </div>
-      <nav class="nav" aria-label="Primary">${NAV.map(item).join("")}</nav>
+      <div class="sidebar__scroll">${App.sidebar ? App.sidebar.bodyHTML() : `<nav class="nav" aria-label="Primary">${NAV.map(item).join("")}</nav>`}</div>
       <div class="nav nav--foot">${NAV_FOOT.map(item).join("")}</div>
       <div class="sidebar__card">
         <span class="sidebar__card-icon">${icon("sparkles", { size: 18 })}</span>
@@ -89,6 +94,7 @@
         <kbd class="search__kbd">⌘K</kbd>
       </div>
       <div class="topbar__actions">
+        <button class="icon-btn icon-btn--ai" data-ai-assistant aria-label="Ask Kerso AI" data-tip="Ask Kerso AI">${icon("sparkles", { size: 22 })}</button>
         <button class="icon-btn ${unreadN ? "icon-btn--badge" : ""}" data-notif aria-label="Notifications">${icon("bell", { size: 22 })}${unreadN ? `<span class="badge badge--coral">${unreadN}</span>` : ""}</button>
         <button class="icon-btn ${unreadM ? "icon-btn--badge" : ""}" data-msgs aria-label="Messages">${icon("message", { size: 22 })}${unreadM ? `<span class="badge">${unreadM}</span>` : ""}</button>
         <span class="topbar__divider" aria-hidden="true"></span>
@@ -103,6 +109,7 @@
   App.renderShell = function () {
     qs(".sidebar").innerHTML = sidebarHTML();
     qs(".topbar").innerHTML = topbarHTML();
+    if (App.sidebar) App.sidebar.wire();
   };
 
   function updateActiveNav() {
@@ -116,7 +123,7 @@
   /* ---------------- Router ---------------- */
   const router = {
     current: "dashboard",
-    routes: ["dashboard", "explore", "analytics", "customers", "reviews", "settings"],
+    routes: ["dashboard", "workspace", "explore", "analytics", "customers", "reviews", "automations", "marketplace", "settings"],
     start() {
       window.addEventListener("hashchange", () => this.resolve());
       this.resolve();
@@ -139,6 +146,7 @@
       // render
       content.innerHTML = `<div class="content__inner">${page.render()}</div>`;
       updateActiveNav();
+      if (App.sidebar) App.sidebar.recordVisit(this.current);
       requestAnimationFrame(() => content.classList.remove("is-leaving"));
       page.init && page.init(qs(".content__inner", content));
       content.scrollTop = 0;
@@ -147,11 +155,33 @@
   };
   App.router = router;
 
+  /* ---------------- Smart notifications (#13) ---------------- */
+  function smartNotifications() {
+    const ai = App.ai, out = [];
+    if (!ai) return out;
+    const days = (d) => Math.round((App.now() - new Date(d)) / 86400000);
+    const risk = D.deals.filter((d) => d.status === "open" && ai.opportunityScore(d) < 35).sort((a, b) => ai.opportunityScore(a) - ai.opportunityScore(b))[0];
+    if (risk) out.push({ type: "deal", nav: "customers", title: "Deal at risk", desc: `${risk.title} (${risk.company}) — ${ai.opportunityScore(risk)}% to close` });
+    const renew = D.customers.filter((c) => { const d = (new Date(c.renewal) - App.now()) / 86400000; return d > 0 && d <= 21; }).sort((a, b) => new Date(a.renewal) - new Date(b.renewal))[0];
+    if (renew) out.push({ type: "system", nav: "customers", title: "Contract renewing soon", desc: `${renew.name} (${renew.company}) renews ${fmt.relTime(renew.renewal)}` });
+    const cold = D.customers.filter((c) => days(c.lastContact) > 30 && c.status !== "Churned").sort((a, b) => new Date(a.lastContact) - new Date(b.lastContact))[0];
+    if (cold) out.push({ type: "customer", nav: "customers", title: "Customer inactivity", desc: `No contact with ${cold.name} in ${days(cold.lastContact)} days` });
+    const rec = ai.recommendations()[0];
+    if (rec) out.push({ type: "system", nav: "automations", title: "AI recommendation", desc: `${rec.title} — ${rec.body}` });
+    const ev = (D.calendarEvents || []).filter((e) => new Date(e.date) >= new Date(App.now().getFullYear(), App.now().getMonth(), App.now().getDate())).sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+    if (ev) out.push({ type: "task", nav: "workspace", title: "Upcoming: " + ev.title, desc: `${fmt.dateShort(ev.date)} · ${ev.start}` });
+    return out;
+  }
+
   /* ---------------- Notifications panel ---------------- */
   function notifPanel(anchor) {
     const items = D.notifications;
     const typeIcon = { deal: "briefcase", review: "star", task: "check-circle", customer: "user", system: "info" };
     const typeColor = { deal: "emerald", review: "amber", task: "indigo", customer: "sky", system: "slate" };
+    const smart = smartNotifications();
+    const smartHTML = smart.length
+      ? `<div class="notif-smart"><div class="notif-smart__label">${icon("sparkles", { size: 13 })} Smart · AI</div>${smart.map((n) => `<button class="notif notif--smart" data-smart-go="${n.nav}"><span class="notif__icon notif__icon--${typeColor[n.type] || "indigo"}">${icon(typeIcon[n.type] || "info", { size: 16 })}</span><div class="notif__body"><p class="notif__title">${escapeHtml(n.title)}</p><p class="notif__desc">${escapeHtml(n.desc)}</p></div></button>`).join("")}</div>`
+      : "";
     const list = items.length
       ? items.map((n) => `<button class="notif ${n.read ? "" : "is-unread"}" data-notif-id="${n.id}">
           <span class="notif__icon notif__icon--${typeColor[n.type]}">${icon(typeIcon[n.type] || "info", { size: 16 })}</span>
@@ -161,7 +191,7 @@
       : ui.emptyState({ icon: "bell", title: "You're all caught up", desc: "No new notifications." });
     const html = `<div class="panel-pop">
       <header class="panel-pop__head"><h3>Notifications</h3><button class="panel-pop__link" data-mark-all>Mark all read</button></header>
-      <div class="panel-pop__list">${list}</div>
+      <div class="panel-pop__list">${smartHTML}${list}</div>
       <footer class="panel-pop__foot"><button class="panel-pop__all" data-all-notif>View all notifications</button></footer>
     </div>`;
     const pop = ui.popover(anchor, html, { align: "end", width: 360, closeOnSelect: false });
@@ -177,6 +207,7 @@
       ui.toast("All notifications marked as read", { type: "success" });
     });
     on(pop.el, "click", "[data-all-notif]", () => { pop.close(); ui.toast("Notification center", { type: "info" }); });
+    on(pop.el, "click", "[data-smart-go]", (e, t) => { pop.close(); App.router.go(t.dataset.smartGo); });
   }
 
   function msgPanel(anchor) {
@@ -230,85 +261,6 @@
     if (msg) { let b = qs(".badge", msg); if (unreadM) { if (!b) { b = App.node('<span class="badge"></span>'); msg.appendChild(b); } b.textContent = unreadM; msg.classList.add("icon-btn--badge"); } else if (b) { b.remove(); msg.classList.remove("icon-btn--badge"); } }
   }
 
-  /* ---------------- Command palette search ---------------- */
-  const Search = (() => {
-    let panel = null, results = [], active = -1, anchor = null, input = null;
-    function build(q) {
-      q = q.trim().toLowerCase();
-      const groups = [];
-      const cap = (arr, n = 4) => arr.slice(0, n);
-      if (!q) {
-        groups.push({ label: "Pages", items: NAV.map((n) => ({ type: "page", id: n.id, label: n.label, icon: n.icon, sub: "Go to page" })) });
-      } else {
-        const pages = NAV.filter((n) => n.label.toLowerCase().includes(q)).map((n) => ({ type: "page", id: n.id, label: n.label, icon: n.icon, sub: "Page" }));
-        if (pages.length) groups.push({ label: "Pages", items: pages });
-        const cust = cap(D.customers.filter((c) => c.name.toLowerCase().includes(q) || c.company.toLowerCase().includes(q) || c.email.toLowerCase().includes(q))).map((c) => ({ type: "customer", ref: c, label: c.name, icon: "user", sub: c.company }));
-        if (cust.length) groups.push({ label: "Customers", items: cust });
-        const comp = cap(D.companies.filter((c) => c.name.toLowerCase().includes(q) || c.industry.toLowerCase().includes(q))).map((c) => ({ type: "company", ref: c, label: c.name, icon: "building", sub: c.industry }));
-        if (comp.length) groups.push({ label: "Companies", items: comp });
-        const dl = cap(D.deals.filter((d) => d.title.toLowerCase().includes(q) || d.company.toLowerCase().includes(q))).map((d) => ({ type: "deal", ref: d, label: d.title, icon: "briefcase", sub: `${d.company} · ${fmt.money(d.value)}` }));
-        if (dl.length) groups.push({ label: "Deals", items: dl });
-      }
-      return groups;
-    }
-    function flat(groups) { return groups.flatMap((g) => g.items); }
-    function render(groups) {
-      results = flat(groups);
-      active = results.length ? 0 : -1;
-      let i = -1;
-      const html = groups.length
-        ? groups.map((g) => `<div class="search-pop__group"><div class="search-pop__label">${escapeHtml(g.label)}</div>${g.items.map((it) => { i++; return `<button class="search-pop__item ${i === active ? "is-active" : ""}" data-idx="${i}"><span class="search-pop__icon">${icon(it.icon, { size: 18 })}</span><span class="search-pop__main"><span class="search-pop__title">${escapeHtml(it.label)}</span><span class="search-pop__sub">${escapeHtml(it.sub)}</span></span>${icon("arrow-right", { size: 15, class: "search-pop__go" })}</button>`; }).join("")}</div>`).join("")
-        : `<div class="search-pop__empty">${ui.emptyState({ icon: "search", title: "No results", desc: "Try a different search term." })}</div>`;
-      return `<div class="search-pop">${html}<footer class="search-pop__foot"><span><kbd>↑</kbd><kbd>↓</kbd> navigate</span><span><kbd>↵</kbd> select</span><span><kbd>esc</kbd> close</span></footer></div>`;
-    }
-    function open() {
-      anchor = qs("[data-search-anchor]");
-      input = qs("[data-search-input]");
-      if (panel) return;
-      const groups = build(input.value);
-      panel = App.node(render(groups));
-      document.body.appendChild(panel);
-      position();
-      const justOpened = panel;
-      requestAnimationFrame(() => justOpened && justOpened.classList.add("is-open"));
-      window.addEventListener("resize", position);
-      document.addEventListener("click", onDoc, true);
-      on(panel, "click", "[data-idx]", (e, t) => choose(+t.dataset.idx));
-      on(panel, "mousemove", "[data-idx]", (e, t) => setActive(+t.dataset.idx));
-    }
-    function position() {
-      if (!panel || !anchor) return;
-      const r = anchor.getBoundingClientRect();
-      panel.style.left = r.left + "px";
-      panel.style.top = r.bottom + 8 + "px";
-      panel.style.width = r.width + "px";
-    }
-    function close() {
-      if (!panel) return;
-      panel.classList.remove("is-open");
-      const p = panel; panel = null;
-      setTimeout(() => p.remove(), 140);
-      window.removeEventListener("resize", position);
-      document.removeEventListener("click", onDoc, true);
-    }
-    function onDoc(e) { if (panel && !panel.contains(e.target) && !anchor.contains(e.target)) close(); }
-    function refresh() { if (!panel) return; const groups = build(input.value); panel.innerHTML = App.node(render(groups)).innerHTML; on(panel, "click", "[data-idx]", (e, t) => choose(+t.dataset.idx)); on(panel, "mousemove", "[data-idx]", (e, t) => setActive(+t.dataset.idx)); }
-    function setActive(i) { active = i; qsa("[data-idx]", panel).forEach((el) => el.classList.toggle("is-active", +el.dataset.idx === active)); }
-    function move(d) { if (!results.length) return; active = (active + d + results.length) % results.length; setActive(active); const el = qs(`[data-idx="${active}"]`, panel); if (el && el.scrollIntoView) el.scrollIntoView({ block: "nearest" }); }
-    function choose(i) {
-      const it = results[i];
-      if (!it) return;
-      close();
-      input.value = "";
-      input.blur();
-      if (it.type === "page") router.go(it.id);
-      else if (it.type === "customer") App.openCustomerDrawer(it.ref);
-      else if (it.type === "company") App.openCompanyDrawer(it.ref);
-      else if (it.type === "deal") App.openDealDrawer(it.ref);
-    }
-    return { open, close, refresh, move, choose: () => choose(active), get isOpen() { return !!panel; } };
-  })();
-
   /* ---------------- Mobile nav ---------------- */
   function openMobileNav() { document.querySelector(".app").classList.add("app--nav-open"); }
   function closeMobileNav() { const a = document.querySelector(".app"); if (a) a.classList.remove("app--nav-open"); }
@@ -335,20 +287,11 @@
     on(document, "click", "[data-notif]", (e, t) => notifPanel(t.closest("button")));
     on(document, "click", "[data-msgs]", (e, t) => msgPanel(t.closest("button")));
     on(document, "click", "[data-user]", (e, t) => userMenu(t.closest("button")));
+    on(document, "click", "[data-ai-assistant]", () => App.aiAssistant.open());
 
-    // search
-    on(document, "focus", "[data-search-input]", () => Search.open(), true);
-    on(document, "click", "[data-search-input]", () => Search.open());
-    on(document, "input", "[data-search-input]", () => Search.refresh());
-    document.addEventListener("keydown", (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); const inp = qs("[data-search-input]"); inp.focus(); Search.open(); }
-      if (Search.isOpen) {
-        if (e.key === "ArrowDown") { e.preventDefault(); Search.move(1); }
-        else if (e.key === "ArrowUp") { e.preventDefault(); Search.move(-1); }
-        else if (e.key === "Enter") { e.preventDefault(); Search.choose(); }
-        else if (e.key === "Escape") { Search.close(); qs("[data-search-input]").blur(); }
-      }
-    });
+    // topbar search opens the global command palette (search + commands + AI + NL search)
+    on(document, "focus", "[data-search-input]", (e, t) => { t.blur(); App.command.open(); }, true);
+    on(document, "click", "[data-search-input]", () => App.command.open());
 
     // global tabs (.tabbed > .tabs > .tab + .tabpane)
     on(document, "click", ".tab[data-tab]", (e, t) => {
@@ -377,6 +320,15 @@
     App.renderShell();
     ui.initTooltips();
     wireGlobal();
+    // global keyboard shortcuts + ⌘K palette
+    if (App.command) App.command.installShortcuts();
+    // record entity opens into "Recent items" (centralized, so every entry point benefits)
+    ["openCustomerDrawer", "openCompanyDrawer", "openDealDrawer"].forEach((k) => {
+      const orig = App[k];
+      if (typeof orig !== "function") return;
+      const kind = k === "openCompanyDrawer" ? "company" : k === "openDealDrawer" ? "deal" : "customer";
+      App[k] = function (ref) { App.sidebar && App.sidebar.recordEntity(kind, ref); return orig.apply(this, arguments); };
+    });
     router.start();
   }
 
