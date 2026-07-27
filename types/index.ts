@@ -227,6 +227,104 @@ export type Message = {
   online: boolean;
 };
 
+export type ConversationStatus = "open" | "pending" | "closed";
+
+export type ConversationChannel = "email" | "chat" | "whatsapp";
+
+export type MessageRole = "customer" | "agent" | "ai" | "note" | "system";
+
+export type ConversationMessage = {
+  id: string;
+  role: MessageRole;
+  authorName: string;
+  body: string;
+  time: Date;
+};
+
+export type Conversation = {
+  id: string;
+  customerId: string;
+  subject: string;
+  preview: string;
+  status: ConversationStatus;
+  assignee: string | null;
+  channel: ConversationChannel;
+  unread: boolean;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  messages: ConversationMessage[];
+  aiHandled: boolean;
+  escalated: boolean;
+};
+
+export type TicketStatus =
+  | "open"
+  | "in_progress"
+  | "waiting"
+  | "resolved"
+  | "closed";
+
+export type Ticket = {
+  id: string;
+  title: string;
+  description: string;
+  customerId: string;
+  conversationId: string | null;
+  status: TicketStatus;
+  priority: Priority;
+  assignee: string;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type KbArticleStatus = "draft" | "published";
+
+export type KbArticle = {
+  id: string;
+  title: string;
+  excerpt: string;
+  body: string;
+  category: string;
+  collection: string;
+  status: KbArticleStatus;
+  updatedAt: Date;
+  views: number;
+};
+
+export type AutomationRule = {
+  id: string;
+  name: string;
+  description: string;
+  trigger: string;
+  action: string;
+  active: boolean;
+  runs: number;
+};
+
+export type AiAgentState = {
+  name: string;
+  active: boolean;
+  instructions: string;
+  resolutionRate: number;
+  escalationRate: number;
+  conversationsHandled: number;
+  knowledgeSources: string[];
+};
+
+export type SupportAnalytics = {
+  totalConversations: number;
+  openConversations: number;
+  resolvedConversations: number;
+  avgFirstResponseMins: number;
+  avgResolutionMins: number;
+  aiResolutionRate: number;
+  aiEscalationRate: number;
+  csat: number;
+  team: Array<{ name: string; color: AvatarColor; resolved: number; csat: number }>;
+};
+
 export type NamedValue = {
   name: string;
   value: number;
@@ -286,6 +384,12 @@ export type AppData = {
   tasks: Task[];
   notifications: Notification[];
   messages: Message[];
+  conversations: Conversation[];
+  tickets: Ticket[];
+  kbArticles: KbArticle[];
+  automations: AutomationRule[];
+  aiAgent: AiAgentState;
+  supportAnalytics: SupportAnalytics;
   analytics: Analytics;
   exploreStats: ExploreStat[];
   STAGES: readonly DealStage[];

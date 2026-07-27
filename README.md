@@ -1,13 +1,12 @@
-# Kerso CRM
+# Kerso
 
-Production-ready Next.js (App Router) CRM with Persian (`fa`) and English (`en`) locales, RTL/LTR support, and the original Kerso design system.
+Customer communication + support + AI platform. Persian (`fa`) and English (`en`), RTL/LTR, built on the Kerso design system.
 
 ## Stack
 
 - Next.js 16 (App Router) + React 19 + TypeScript
-- CSS design tokens (no Tailwind)
+- CSS design tokens (no Tailwind) — see `DESIGN_SYSTEM.md`
 - Locale routing via `proxy.ts` → `/fa/...` and `/en/...`
-- ESLint + Prettier
 
 ## Run
 
@@ -16,53 +15,33 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — you will be redirected to `/fa/dashboard` (default locale).
-
-```bash
-npm run build   # production build
-npm run start   # serve production build
-npm run lint
-npm run typecheck
-```
+Open [http://localhost:3000](http://localhost:3000) — redirected to `/fa/inbox`.
 
 ## Routes
 
 | Path | Page |
 |------|------|
-| `/[locale]/dashboard` | Dashboard — KPIs, revenue, pipeline, deals, tasks |
-| `/[locale]/explore` | Business Explore — company directory |
-| `/[locale]/analytics` | Analytics — charts & cohorts |
-| `/[locale]/customers` | Customers — table, drawers, CRUD |
-| `/[locale]/reviews` | Customer Reviews |
-| `/[locale]/settings` | Settings — profile, theme, billing |
-
-Language switcher preserves the current path (`/fa/customers` ↔ `/en/customers`).
+| `/[locale]/inbox` | Shared inbox (primary) |
+| `/[locale]/customers` | Customers |
+| `/[locale]/tickets` | Tickets |
+| `/[locale]/ai` | AI Agent |
+| `/[locale]/knowledge` | Knowledge base |
+| `/[locale]/automations` | Automations |
+| `/[locale]/analytics` | Support + CRM analytics |
+| `/[locale]/dashboard` | Sales overview (preserved) |
+| `/[locale]/explore` | Companies (preserved) |
+| `/[locale]/reviews` | Reviews (preserved) |
+| `/[locale]/settings` | Settings |
 
 ## Architecture
 
 ```
 app/[locale]/          # locale layouts & pages
-components/
-  layout/              # AppShell, Sidebar, Topbar, search
-  navigation/          # NavLink, LanguageSwitcher
-  ui/                  # Button, Modal, Drawer, DataTable, …
-  charts/              # Area, bars, donut, funnel, heatmap, …
-  providers/           # i18n, theme, data, toast
-features/              # page compositions
-lib/i18n/              # locale config, dictionaries, paths
-lib/data/              # seeded mock data + labels
+components/            # shell, UI, charts
+features/              # Inbox, Tickets, AI, KB, …
+lib/data/              # seed + support-seed
 messages/              # en.json, fa.json
-styles/globals.css     # design system (logical CSS + RTL)
+styles/globals.css     # design system
+DESIGN_SYSTEM.md       # visual language
 legacy/                # original vanilla HTML/JS (reference)
 ```
-
-## i18n & direction
-
-- Persian: `dir="rtl"`, Vazirmatn, `fa-IR` formatting (تومان, Jalali dates)
-- English: `dir="ltr"`, Inter, `en-US` formatting (USD)
-- UI copy lives in `messages/*.json` — not hardcoded in components
-
-## Notes
-
-- Mock data is in-memory for the session; theme, accent, and sidebar prefs use `localStorage` (`kerso:` prefix).
-- The original vanilla app is preserved under `legacy/` for reference.

@@ -24,6 +24,8 @@ import { Icon, type IconName } from "@/lib/icons";
 import { useData } from "@/hooks/useData";
 import { useI18n } from "@/hooks/useI18n";
 import { useToast } from "@/hooks/useToast";
+import { localizedPath } from "@/lib/i18n/navigation";
+import { useRouter } from "next/navigation";
 import {
   customerStatusLabel,
   dealStageLabel,
@@ -117,7 +119,7 @@ function SortTh({
 }
 
 export function CustomersPage() {
-  const { dict, t, fmt } = useI18n();
+  const { locale, dict, t, fmt } = useI18n();
   const {
     data,
     addCustomer,
@@ -126,6 +128,7 @@ export function CustomersPage() {
     removeCustomers,
   } = useData();
   const { toast } = useToast();
+  const router = useRouter();
 
   const [status, setStatus] = useState("all");
   const [q, setQ] = useState("");
@@ -770,14 +773,10 @@ export function CustomersPage() {
               <button
                 type="button"
                 className="drawer-quick__btn"
-                onClick={() =>
-                  toast(`${dict.customers.deal} — ${customer.name}`, {
-                    type: "info",
-                  })
-                }
+                onClick={() => router.push(localizedPath(locale, "/inbox"))}
               >
-                <Icon name="briefcase" size={18} />
-                <span>{dict.customers.deal}</span>
+                <Icon name="inbox" size={18} />
+                <span>{dict.nav.inbox}</span>
               </button>
             </div>
 

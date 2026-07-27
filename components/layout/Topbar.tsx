@@ -266,7 +266,7 @@ export function Topbar({ onOpenNav }: TopbarProps) {
                     className="panel-pop__all"
                     onClick={() => {
                       setPanel(null);
-                      toast(t("shell.inbox"), { type: "info" });
+                      router.push(localizedPath(locale, "/inbox"));
                     }}
                   >
                     {t("shell.openInbox")}

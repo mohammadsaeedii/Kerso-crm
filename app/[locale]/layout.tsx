@@ -36,7 +36,7 @@ export async function generateMetadata({
     : `%s — ${dict.meta.brand}`;
   return {
     title: {
-      default: `${dict.meta.brand} — CRM`,
+      default: `${dict.meta.brand}`,
       template,
     },
     description: dict.meta.description,

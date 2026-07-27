@@ -25,10 +25,15 @@ type SearchItem = {
 };
 
 const PAGES: { id: string; icon: IconName; labelKey: string }[] = [
+  { id: "inbox", icon: "inbox", labelKey: "nav.inbox" },
+  { id: "customers", icon: "customers", labelKey: "nav.customers" },
+  { id: "tickets", icon: "ticket", labelKey: "nav.tickets" },
+  { id: "ai", icon: "bot", labelKey: "nav.ai" },
+  { id: "knowledge", icon: "book", labelKey: "nav.knowledge" },
+  { id: "automations", icon: "zap", labelKey: "nav.automations" },
+  { id: "analytics", icon: "analytics", labelKey: "nav.analytics" },
   { id: "dashboard", icon: "dashboard", labelKey: "nav.dashboard" },
   { id: "explore", icon: "explore", labelKey: "nav.explore" },
-  { id: "analytics", icon: "analytics", labelKey: "nav.analytics" },
-  { id: "customers", icon: "customers", labelKey: "nav.customers" },
   { id: "reviews", icon: "reviews", labelKey: "nav.reviews" },
   { id: "settings", icon: "gear", labelKey: "nav.settings" },
 ];

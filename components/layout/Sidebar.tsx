@@ -2,7 +2,7 @@
 
 import { useI18n } from "@/hooks/useI18n";
 import { useToast } from "@/hooks/useToast";
-import { Icon } from "@/lib/icons";
+import { Icon, type IconName } from "@/lib/icons";
 import { BrandMark } from "./BrandMark";
 import { NavLink } from "@/components/navigation/NavLink";
 
@@ -12,16 +12,31 @@ export type SidebarProps = {
   onNavigate?: () => void;
 };
 
+type NavItem = {
+  id: string;
+  href: string;
+  icon: IconName;
+  label: string;
+};
+
 export function Sidebar({ collapsed, onToggleCollapse, onNavigate }: SidebarProps) {
   const { locale, t, dict } = useI18n();
   const { toast } = useToast();
 
-  const primary = [
-    { id: "dashboard", href: "/dashboard", icon: "dashboard" as const, label: dict.nav.dashboard },
-    { id: "explore", href: "/explore", icon: "explore" as const, label: dict.nav.explore },
-    { id: "analytics", href: "/analytics", icon: "analytics" as const, label: dict.nav.analytics },
-    { id: "customers", href: "/customers", icon: "customers" as const, label: dict.nav.customers },
-    { id: "reviews", href: "/reviews", icon: "reviews" as const, label: dict.nav.reviews },
+  const primary: NavItem[] = [
+    { id: "inbox", href: "/inbox", icon: "inbox", label: dict.nav.inbox },
+    { id: "customers", href: "/customers", icon: "customers", label: dict.nav.customers },
+    { id: "tickets", href: "/tickets", icon: "ticket", label: dict.nav.tickets },
+    { id: "ai", href: "/ai", icon: "bot", label: dict.nav.ai },
+    { id: "knowledge", href: "/knowledge", icon: "book", label: dict.nav.knowledge },
+    { id: "automations", href: "/automations", icon: "zap", label: dict.nav.automations },
+    { id: "analytics", href: "/analytics", icon: "analytics", label: dict.nav.analytics },
+  ];
+
+  const secondary: NavItem[] = [
+    { id: "dashboard", href: "/dashboard", icon: "dashboard", label: dict.nav.dashboard },
+    { id: "explore", href: "/explore", icon: "explore", label: dict.nav.explore },
+    { id: "reviews", href: "/reviews", icon: "reviews", label: dict.nav.reviews },
   ];
 
   return (
@@ -44,6 +59,22 @@ export function Sidebar({ collapsed, onToggleCollapse, onNavigate }: SidebarProp
 
       <nav className="nav" aria-label={dict.nav.primary}>
         {primary.map((item) => (
+          <NavLink
+            key={item.id}
+            locale={locale}
+            href={item.href}
+            label={item.label}
+            icon={item.icon}
+            onNavigate={onNavigate}
+          />
+        ))}
+      </nav>
+
+      {!collapsed && (
+        <p className="nav__section-label">{dict.nav.workspace}</p>
+      )}
+      <nav className="nav nav--compact" aria-label={dict.nav.workspace}>
+        {secondary.map((item) => (
           <NavLink
             key={item.id}
             locale={locale}

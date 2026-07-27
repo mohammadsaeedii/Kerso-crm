@@ -227,6 +227,30 @@ const PATHS = {
   "palette": (
     <><path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-1 2-2 0-1.4-1-1.5-1-2.5a2 2 0 0 1 2-2h2a4 4 0 0 0 4-4c0-3.6-4-5.5-9-5.5z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/></>
   ),
+  "inbox": (
+    <><path d="M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><path d="M4 13h4.2a2 2 0 0 1 1.8 1.1L11 16h2l1-1.9a2 2 0 0 1 1.8-1.1H20"/></>
+  ),
+  "ticket": (
+    <><path d="M4 9a2 2 0 0 0 0 4v4.5A1.5 1.5 0 0 0 5.5 19h13a1.5 1.5 0 0 0 1.5-1.5V13a2 2 0 0 0 0-4V6.5A1.5 1.5 0 0 0 18.5 5h-13A1.5 1.5 0 0 0 4 6.5z"/><path d="M12 8v8"/></>
+  ),
+  "bot": (
+    <><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 3v3"/><circle cx="9" cy="13" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1.2" fill="currentColor" stroke="none"/><path d="M9 16.5h6"/></>
+  ),
+  "book": (
+    <><path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H19v16H7.5A2.5 2.5 0 0 0 5 21.5z"/><path d="M5 5.5v16"/><path d="M9 8h6M9 12h6"/></>
+  ),
+  "zap": (
+    <><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></>
+  ),
+  "paperclip": (
+    <><path d="M15.5 8.5l-6.2 6.2a2.5 2.5 0 0 0 3.5 3.5l7-7a4 4 0 0 0-5.7-5.7l-7.4 7.4a5.5 5.5 0 0 0 7.8 7.8L18 17"/></>
+  ),
+  "note": (
+    <><path d="M6 4.5h9l4 4V19.5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-14a1 1 0 0 1 1-1z"/><path d="M15 4.5V9h4.5"/><path d="M8 13h8M8 16h5"/></>
+  ),
+  "panel-right": (
+    <><rect x="3" y="4" width="18" height="16" rx="2.5"/><line x1="15" y1="4" x2="15" y2="20"/></>
+  ),
 } as const;
 
 export type IconName = keyof typeof PATHS;

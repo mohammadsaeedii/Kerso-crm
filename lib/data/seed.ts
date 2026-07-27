@@ -10,6 +10,7 @@ import {
   TAGS,
   monthLabel,
 } from "@/lib/data/labels";
+import { createSupportSeed } from "@/lib/data/support-seed";
 import type {
   Activity,
   AppData,
@@ -868,6 +869,8 @@ export function createSeedData(locale: Locale): AppData {
     },
   ];
 
+  const support = createSupportSeed(locale, customers, currentUser.name);
+
   return {
     currentUser,
     AVATARS,
@@ -884,6 +887,12 @@ export function createSeedData(locale: Locale): AppData {
     tasks,
     notifications,
     messages,
+    conversations: support.conversations,
+    tickets: support.tickets,
+    kbArticles: support.kbArticles,
+    automations: support.automations,
+    aiAgent: support.aiAgent,
+    supportAnalytics: support.supportAnalytics,
     analytics,
     exploreStats,
     STAGES: DEAL_STAGES,

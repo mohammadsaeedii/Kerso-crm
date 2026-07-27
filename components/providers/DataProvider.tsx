@@ -12,13 +12,19 @@ import { createSeedData } from "@/lib/data/seed";
 import type { Locale } from "@/lib/i18n/config";
 import { uid } from "@/lib/utils/id";
 import type {
+  AiAgentState,
   AppData,
+  AutomationRule,
   Company,
+  Conversation,
+  ConversationMessage,
   Customer,
   Deal,
+  KbArticle,
   Notification,
   Review,
   Task,
+  Ticket,
 } from "@/types";
 
 export type DataContextValue = {
@@ -41,6 +47,17 @@ export type DataContextValue = {
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   removeNotification: (id: string) => void;
+  updateConversation: (id: string, patch: Partial<Conversation>) => void;
+  appendMessage: (
+    conversationId: string,
+    message: Omit<ConversationMessage, "id"> & { id?: string },
+  ) => void;
+  updateTicket: (id: string, patch: Partial<Ticket>) => void;
+  addTicket: (t: Omit<Ticket, "id"> & { id?: string }) => Ticket;
+  updateKbArticle: (id: string, patch: Partial<KbArticle>) => void;
+  addKbArticle: (a: Omit<KbArticle, "id"> & { id?: string }) => KbArticle;
+  toggleAutomation: (id: string) => void;
+  updateAiAgent: (patch: Partial<AiAgentState>) => void;
 };
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -193,6 +210,99 @@ export function DataProvider({
     }));
   }, []);
 
+  const updateConversation = useCallback(
+    (id: string, patch: Partial<Conversation>) => {
+      setData((d) => ({
+        ...d,
+        conversations: d.conversations.map((c) =>
+          c.id === id ? { ...c, ...patch, updatedAt: patch.updatedAt ?? new Date() } : c,
+        ),
+      }));
+    },
+    [],
+  );
+
+  const appendMessage = useCallback(
+    (
+      conversationId: string,
+      message: Omit<ConversationMessage, "id"> & { id?: string },
+    ) => {
+      const row: ConversationMessage = {
+        ...message,
+        id: message.id ?? uid("m"),
+      };
+      setData((d) => ({
+        ...d,
+        conversations: d.conversations.map((c) => {
+          if (c.id !== conversationId) return c;
+          return {
+            ...c,
+            messages: [...c.messages, row],
+            preview: row.body.slice(0, 80),
+            updatedAt: row.time,
+            unread: row.role === "customer" ? true : c.unread,
+          };
+        }),
+      }));
+    },
+    [],
+  );
+
+  const updateTicket = useCallback((id: string, patch: Partial<Ticket>) => {
+    setData((d) => ({
+      ...d,
+      tickets: d.tickets.map((t) =>
+        t.id === id ? { ...t, ...patch, updatedAt: patch.updatedAt ?? new Date() } : t,
+      ),
+    }));
+  }, []);
+
+  const addTicket = useCallback(
+    (ticket: Omit<Ticket, "id"> & { id?: string }): Ticket => {
+      const row: Ticket = { ...ticket, id: ticket.id ?? uid("tk") };
+      setData((d) => ({ ...d, tickets: [row, ...d.tickets] }));
+      return row;
+    },
+    [],
+  );
+
+  const updateKbArticle = useCallback(
+    (id: string, patch: Partial<KbArticle>) => {
+      setData((d) => ({
+        ...d,
+        kbArticles: d.kbArticles.map((a) =>
+          a.id === id ? { ...a, ...patch, updatedAt: patch.updatedAt ?? new Date() } : a,
+        ),
+      }));
+    },
+    [],
+  );
+
+  const addKbArticle = useCallback(
+    (article: Omit<KbArticle, "id"> & { id?: string }): KbArticle => {
+      const row: KbArticle = { ...article, id: article.id ?? uid("kb") };
+      setData((d) => ({ ...d, kbArticles: [row, ...d.kbArticles] }));
+      return row;
+    },
+    [],
+  );
+
+  const toggleAutomation = useCallback((id: string) => {
+    setData((d) => ({
+      ...d,
+      automations: d.automations.map((a: AutomationRule) =>
+        a.id === id ? { ...a, active: !a.active } : a,
+      ),
+    }));
+  }, []);
+
+  const updateAiAgent = useCallback((patch: Partial<AiAgentState>) => {
+    setData((d) => ({
+      ...d,
+      aiAgent: { ...d.aiAgent, ...patch },
+    }));
+  }, []);
+
   const value = useMemo<DataContextValue>(
     () => ({
       data,
@@ -214,6 +324,14 @@ export function DataProvider({
       markNotificationRead,
       markAllNotificationsRead,
       removeNotification,
+      updateConversation,
+      appendMessage,
+      updateTicket,
+      addTicket,
+      updateKbArticle,
+      addKbArticle,
+      toggleAutomation,
+      updateAiAgent,
     }),
     [
       data,
@@ -234,6 +352,14 @@ export function DataProvider({
       markNotificationRead,
       markAllNotificationsRead,
       removeNotification,
+      updateConversation,
+      appendMessage,
+      updateTicket,
+      addTicket,
+      updateKbArticle,
+      addKbArticle,
+      toggleAutomation,
+      updateAiAgent,
     ],
   );
 
