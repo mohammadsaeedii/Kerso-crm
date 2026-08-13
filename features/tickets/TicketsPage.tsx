@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/Modal";
 import { useData } from "@/hooks/useData";
 import { useI18n } from "@/hooks/useI18n";
 import { useToast } from "@/hooks/useToast";
+import { useRecordQuery } from "@/hooks/useRecordQuery";
 import { localizedPath } from "@/lib/i18n/navigation";
 import type { Priority, TicketStatus } from "@/types";
 
@@ -22,14 +23,18 @@ const STATUS_VARIANT: Record<TicketStatus, string> = {
   closed: "neutral",
 };
 
-export function TicketsPage() {
+export function TicketsPage({
+  initialTicketId = null,
+}: {
+  initialTicketId?: string | null;
+}) {
   const { locale, dict, t, fmt } = useI18n();
   const { data, updateTicket, addTicket } = useData();
   const { toast } = useToast();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [priority, setPriority] = useState("all");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useRecordQuery("ticket", initialTicketId);
   const [createOpen, setCreateOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -187,7 +192,21 @@ export function TicketsPage() {
             <dl className="ctx-attrs">
               <div>
                 <dt>{dict.ticketsPage.customer}</dt>
-                <dd>{selectedCustomer?.name ?? "—"}</dd>
+                <dd>
+                  {selectedCustomer ? (
+                    <Link
+                      className="link"
+                      href={localizedPath(
+                        locale,
+                        `/customers?customer=${selectedCustomer.id}`,
+                      )}
+                    >
+                      {selectedCustomer.name}
+                    </Link>
+                  ) : (
+                    "—"
+                  )}
+                </dd>
               </div>
               <div>
                 <dt>{dict.ticketsPage.assignee}</dt>
@@ -206,7 +225,13 @@ export function TicketsPage() {
               ))}
             </div>
             {selected.conversationId ? (
-              <Link className="btn btn--secondary btn--sm" href={localizedPath(locale, "/inbox")}>
+              <Link
+                className="btn btn--secondary btn--sm"
+                href={localizedPath(
+                  locale,
+                  `/inbox?conversation=${selected.conversationId}`,
+                )}
+              >
                 {dict.ticketsPage.openConversation}
               </Link>
             ) : null}

@@ -9,6 +9,17 @@ import {
   type ReactNode,
 } from "react";
 import { createSeedData } from "@/lib/data/seed";
+import { recountStats } from "@/lib/data/relations";
+import {
+  eventCustomerCreated,
+  eventCustomerUpdated,
+  eventDealCreated,
+  eventDealStageChanged,
+  eventMessageReceived,
+  eventNoteAdded,
+  eventTaskCreated,
+  eventTicketCreated,
+} from "@/lib/data/timeline";
 import type { Locale } from "@/lib/i18n/config";
 import { uid } from "@/lib/utils/id";
 import type {
@@ -21,11 +32,17 @@ import type {
   Customer,
   Deal,
   KbArticle,
+  Note,
   Notification,
   Review,
   Task,
   Ticket,
+  TimelineEvent,
 } from "@/types";
+
+function prependTimeline(data: AppData, event: TimelineEvent): AppData {
+  return { ...data, timeline: [event, ...data.timeline] };
+}
 
 export type DataContextValue = {
   data: AppData;
@@ -44,6 +61,14 @@ export type DataContextValue = {
   updateReview: (id: string, patch: Partial<Review>) => void;
   toggleTask: (id: string) => void;
   addTask: (t: Omit<Task, "id"> & { id?: string }) => Task;
+  updateTask: (id: string, patch: Partial<Task>) => void;
+  addNote: (
+    note: Omit<Note, "id" | "createdAt"> & { id?: string; createdAt?: Date },
+  ) => Note;
+  updateNote: (id: string, patch: Partial<Note>) => void;
+  deleteNote: (id: string) => void;
+  appendTimeline: (event: TimelineEvent) => void;
+  assignConversation: (conversationId: string, teamMemberId: string) => void;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   removeNotification: (id: string) => void;
@@ -81,37 +106,65 @@ export function DataProvider({
     setData(createSeedData(locale));
   }, [locale]);
 
+  const appendTimeline = useCallback((event: TimelineEvent) => {
+    setData((d) => prependTimeline(d, event));
+  }, []);
+
   const addCustomer = useCallback(
     (c: Omit<Customer, "id"> & { id?: string }): Customer => {
       const row: Customer = { ...c, id: c.id ?? uid("c") };
-      setData((d) => ({ ...d, customers: [row, ...d.customers] }));
+      setData((d) =>
+        recountStats(
+          prependTimeline(
+            { ...d, customers: [row, ...d.customers] },
+            eventCustomerCreated({
+              customerId: row.id,
+              actorId: d.currentUser.id,
+            }),
+          ),
+        ),
+      );
       return row;
     },
     [],
   );
 
   const updateCustomer = useCallback((id: string, patch: Partial<Customer>) => {
-    setData((d) => ({
-      ...d,
-      customers: d.customers.map((c) =>
-        c.id === id ? { ...c, ...patch } : c,
+    setData((d) =>
+      recountStats(
+        prependTimeline(
+          {
+            ...d,
+            customers: d.customers.map((c) =>
+              c.id === id ? { ...c, ...patch } : c,
+            ),
+          },
+          eventCustomerUpdated({
+            customerId: id,
+            actorId: d.currentUser.id,
+          }),
+        ),
       ),
-    }));
+    );
   }, []);
 
   const removeCustomer = useCallback((id: string) => {
-    setData((d) => ({
-      ...d,
-      customers: d.customers.filter((c) => c.id !== id),
-    }));
+    setData((d) =>
+      recountStats({
+        ...d,
+        customers: d.customers.filter((c) => c.id !== id),
+      }),
+    );
   }, []);
 
   const removeCustomers = useCallback((ids: string[]) => {
     const set = new Set(ids);
-    setData((d) => ({
-      ...d,
-      customers: d.customers.filter((c) => !set.has(c.id)),
-    }));
+    setData((d) =>
+      recountStats({
+        ...d,
+        customers: d.customers.filter((c) => !set.has(c.id)),
+      }),
+    );
   }, []);
 
   const addCompany = useCallback(
@@ -142,24 +195,51 @@ export function DataProvider({
   const addDeal = useCallback(
     (deal: Omit<Deal, "id"> & { id?: string }): Deal => {
       const row: Deal = { ...deal, id: deal.id ?? uid("d") };
-      setData((d) => ({ ...d, deals: [row, ...d.deals] }));
+      setData((d) =>
+        recountStats(
+          prependTimeline(
+            { ...d, deals: [row, ...d.deals] },
+            eventDealCreated({
+              dealId: row.id,
+              customerId: row.customerId,
+              actorId: row.ownerId ?? d.currentUser.id,
+            }),
+          ),
+        ),
+      );
       return row;
     },
     [],
   );
 
   const updateDeal = useCallback((id: string, patch: Partial<Deal>) => {
-    setData((d) => ({
-      ...d,
-      deals: d.deals.map((x) => (x.id === id ? { ...x, ...patch } : x)),
-    }));
+    setData((d) => {
+      const prev = d.deals.find((x) => x.id === id);
+      const deals = d.deals.map((x) => (x.id === id ? { ...x, ...patch } : x));
+      let next: AppData = { ...d, deals };
+      if (prev && patch.stage && patch.stage !== prev.stage) {
+        next = prependTimeline(
+          next,
+          eventDealStageChanged({
+            dealId: id,
+            customerId: prev.customerId,
+            fromStage: prev.stage,
+            toStage: patch.stage,
+            actorId: d.currentUser.id,
+          }),
+        );
+      }
+      return recountStats(next);
+    });
   }, []);
 
   const removeDeal = useCallback((id: string) => {
-    setData((d) => ({
-      ...d,
-      deals: d.deals.filter((x) => x.id !== id),
-    }));
+    setData((d) =>
+      recountStats({
+        ...d,
+        deals: d.deals.filter((x) => x.id !== id),
+      }),
+    );
   }, []);
 
   const updateReview = useCallback((id: string, patch: Partial<Review>) => {
@@ -181,11 +261,68 @@ export function DataProvider({
   const addTask = useCallback(
     (task: Omit<Task, "id"> & { id?: string }): Task => {
       const row: Task = { ...task, id: task.id ?? uid("t") };
-      setData((d) => ({ ...d, tasks: [row, ...d.tasks] }));
+      setData((d) =>
+        prependTimeline(
+          { ...d, tasks: [row, ...d.tasks] },
+          eventTaskCreated({
+            taskId: row.id,
+            customerId: row.customerId,
+            actorId: row.assignedTo ?? d.currentUser.id,
+          }),
+        ),
+      );
       return row;
     },
     [],
   );
+
+  const updateTask = useCallback((id: string, patch: Partial<Task>) => {
+    setData((d) => ({
+      ...d,
+      tasks: d.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+    }));
+  }, []);
+
+  const addNote = useCallback(
+    (
+      note: Omit<Note, "id" | "createdAt"> & { id?: string; createdAt?: Date },
+    ): Note => {
+      const row: Note = {
+        ...note,
+        id: note.id ?? uid("n"),
+        createdAt: note.createdAt ?? new Date(),
+      };
+      setData((d) =>
+        prependTimeline(
+          { ...d, notes: [row, ...d.notes] },
+          eventNoteAdded({
+            noteId: row.id,
+            customerId: row.customerId,
+            actorId: row.authorId ?? d.currentUser.id,
+            createdAt: row.createdAt,
+          }),
+        ),
+      );
+      return row;
+    },
+    [],
+  );
+
+  const updateNote = useCallback((id: string, patch: Partial<Note>) => {
+    setData((d) => ({
+      ...d,
+      notes: d.notes.map((n) =>
+        n.id === id ? { ...n, ...patch, updatedAt: new Date() } : n,
+      ),
+    }));
+  }, []);
+
+  const deleteNote = useCallback((id: string) => {
+    setData((d) => ({
+      ...d,
+      notes: d.notes.filter((n) => n.id !== id),
+    }));
+  }, []);
 
   const markNotificationRead = useCallback((id: string) => {
     setData((d) => ({
@@ -215,9 +352,29 @@ export function DataProvider({
       setData((d) => ({
         ...d,
         conversations: d.conversations.map((c) =>
-          c.id === id ? { ...c, ...patch, updatedAt: patch.updatedAt ?? new Date() } : c,
+          c.id === id
+            ? { ...c, ...patch, updatedAt: patch.updatedAt ?? new Date() }
+            : c,
         ),
       }));
+    },
+    [],
+  );
+
+  const assignConversation = useCallback(
+    (conversationId: string, teamMemberId: string) => {
+      setData((d) => {
+        const member = d.teamMembers.find((m) => m.id === teamMemberId);
+        if (!member) return d;
+        return {
+          ...d,
+          conversations: d.conversations.map((c) =>
+            c.id === conversationId
+              ? { ...c, assignee: member.name, updatedAt: new Date() }
+              : c,
+          ),
+        };
+      });
     },
     [],
   );
@@ -231,9 +388,9 @@ export function DataProvider({
         ...message,
         id: message.id ?? uid("m"),
       };
-      setData((d) => ({
-        ...d,
-        conversations: d.conversations.map((c) => {
+      setData((d) => {
+        const conv = d.conversations.find((c) => c.id === conversationId);
+        const conversations = d.conversations.map((c) => {
           if (c.id !== conversationId) return c;
           return {
             ...c,
@@ -242,8 +399,20 @@ export function DataProvider({
             updatedAt: row.time,
             unread: row.role === "customer" ? true : c.unread,
           };
-        }),
-      }));
+        });
+        let next: AppData = { ...d, conversations };
+        if (row.role === "customer" && conv) {
+          next = prependTimeline(
+            next,
+            eventMessageReceived({
+              conversationId,
+              customerId: conv.customerId,
+              createdAt: row.time,
+            }),
+          );
+        }
+        return next;
+      });
     },
     [],
   );
@@ -260,7 +429,17 @@ export function DataProvider({
   const addTicket = useCallback(
     (ticket: Omit<Ticket, "id"> & { id?: string }): Ticket => {
       const row: Ticket = { ...ticket, id: ticket.id ?? uid("tk") };
-      setData((d) => ({ ...d, tickets: [row, ...d.tickets] }));
+      setData((d) =>
+        prependTimeline(
+          { ...d, tickets: [row, ...d.tickets] },
+          eventTicketCreated({
+            ticketId: row.id,
+            customerId: row.customerId,
+            actorId: d.currentUser.id,
+            createdAt: row.createdAt,
+          }),
+        ),
+      );
       return row;
     },
     [],
@@ -321,6 +500,12 @@ export function DataProvider({
       updateReview,
       toggleTask,
       addTask,
+      updateTask,
+      addNote,
+      updateNote,
+      deleteNote,
+      appendTimeline,
+      assignConversation,
       markNotificationRead,
       markAllNotificationsRead,
       removeNotification,
@@ -349,6 +534,12 @@ export function DataProvider({
       updateReview,
       toggleTask,
       addTask,
+      updateTask,
+      addNote,
+      updateNote,
+      deleteNote,
+      appendTimeline,
+      assignConversation,
       markNotificationRead,
       markAllNotificationsRead,
       removeNotification,

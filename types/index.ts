@@ -81,10 +81,19 @@ export type TagKey =
   | "outbound";
 
 export type CurrentUser = {
+  id: string;
   name: string;
   role: string;
   email: string;
   avatar: "face" | AvatarColor;
+};
+
+export type TeamMember = {
+  id: string;
+  name: string;
+  email?: string;
+  avatar: "face" | AvatarColor;
+  role?: string;
 };
 
 export type Kpi = {
@@ -119,9 +128,9 @@ export type PipelineStage = {
 export type Deal = {
   id: string;
   title: string;
-  company: string;
-  owner: string;
-  ownerColor: AvatarColor;
+  customerId?: string;
+  companyId?: string;
+  ownerId?: string;
   value: number;
   stage: DealStage;
   probability: number;
@@ -132,7 +141,7 @@ export type Deal = {
 export type Customer = {
   id: string;
   name: string;
-  company: string;
+  companyId?: string;
   email: string;
   phone: string;
   city: string;
@@ -142,7 +151,7 @@ export type Customer = {
   deals: number;
   health: number;
   avatar: AvatarColor;
-  owner: string;
+  ownerId?: string;
   tags: TagKey[];
   joined: Date;
   lastContact: Date;
@@ -205,8 +214,52 @@ export type Task = {
   due: Date;
   priority: Priority;
   done: boolean;
-  assignee: string;
+  assignedTo?: string;
+  customerId?: string;
+  companyId?: string;
+  dealId?: string;
+  conversationId?: string;
 };
+
+export type Note = {
+  id: string;
+  body: string;
+  customerId?: string;
+  companyId?: string;
+  dealId?: string;
+  authorId?: string;
+  createdAt: Date;
+  updatedAt?: Date;
+};
+
+type TimelineBase = {
+  id: string;
+  customerId?: string;
+  actorId?: string;
+  createdAt: Date;
+};
+
+export type TimelineEvent =
+  | (TimelineBase & { type: "customer_created"; customerId: string })
+  | (TimelineBase & { type: "customer_updated"; customerId: string })
+  | (TimelineBase & {
+      type: "conversation_created";
+      conversationId: string;
+    })
+  | (TimelineBase & {
+      type: "message_received";
+      conversationId: string;
+    })
+  | (TimelineBase & { type: "ticket_created"; ticketId: string })
+  | (TimelineBase & { type: "deal_created"; dealId: string })
+  | (TimelineBase & {
+      type: "deal_stage_changed";
+      dealId: string;
+      fromStage?: DealStage;
+      toStage: DealStage;
+    })
+  | (TimelineBase & { type: "task_created"; taskId: string })
+  | (TimelineBase & { type: "note_added"; noteId: string });
 
 export type Notification = {
   id: string;
@@ -370,6 +423,7 @@ export type ExploreStat = {
 
 export type AppData = {
   currentUser: CurrentUser;
+  teamMembers: TeamMember[];
   AVATARS: readonly AvatarColor[];
   avatarColor: () => AvatarColor;
   kpis: Kpi[];
@@ -382,6 +436,8 @@ export type AppData = {
   reviews: Review[];
   activities: Activity[];
   tasks: Task[];
+  notes: Note[];
+  timeline: TimelineEvent[];
   notifications: Notification[];
   messages: Message[];
   conversations: Conversation[];

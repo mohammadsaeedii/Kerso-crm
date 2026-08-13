@@ -19,6 +19,7 @@
     "settings": "تنظیمات",
     "help": "راهنما و پشتیبانی",
     "primary": "اصلی",
+    "workspace": "فضای کاری",
     "designSystem": "سیستم طراحی"
   },
   "shell": {
@@ -449,7 +450,32 @@
     "addNote": "افزودن یادداشت",
     "noteAdded": "یادداشت افزوده شد",
     "message": "پیام",
-    "messageTo": "پیام به {name}"
+    "messageTo": "پیام به {name}",
+    "conversations": "گفتگوها",
+    "tickets": "تیکت‌ها",
+    "noConversations": "گفتگویی نیست",
+    "noConversationsDesc": "هنوز گفتگویی در صندوق ورودی برای این مشتری نیست.",
+    "noTickets": "تیکتی نیست",
+    "noTicketsDesc": "تیکت پشتیبانی‌ای به این مشتری وصل نیست.",
+    "noActivity": "هنوز فعالیتی نیست",
+    "noActivityDesc": "رویدادها با کار روی این حساب اینجا ظاهر می‌شوند.",
+    "dealCreated": "معامله ایجاد شد",
+    "selectCompany": "انتخاب شرکت",
+    "noCompany": "بدون شرکت",
+    "openTasks": "وظایف باز",
+    "recentConversations": "گفتگوهای اخیر",
+    "newDealTitle": "معاملهٔ جدید — {name}",
+    "timeline": {
+      "conversation_created": "گفتگو شروع شد · {title}",
+      "message_received": "پیام دریافت شد · {title}",
+      "ticket_created": "تیکت ایجاد شد · {title}",
+      "deal_created": "معامله ایجاد شد · {title}",
+      "deal_stage_changed": "معامله به {stage} منتقل شد · {title}",
+      "task_created": "وظیفه ایجاد شد · {title}",
+      "note_added": "یادداشت افزوده شد",
+      "customer_created": "مشتری ایجاد شد",
+      "customer_updated": "اطلاعات مشتری به‌روزرسانی شد"
+    }
   },
   "reviews": {
     "title": "نظرات مشتریان",
@@ -741,6 +767,7 @@
     "mins": "{n} دقیقه",
     "supportTab": "پشتیبانی",
     "crmTab": "CRM"
+  },
   "designSystem": {
     "title": "سیستم طراحی",
     "sub": "رنگ، تایپ، کامپوننت‌ها و آیکون‌های Lucide که کرسو را می‌سازند.",

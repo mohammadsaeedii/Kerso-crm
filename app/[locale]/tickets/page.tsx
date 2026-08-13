@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { TicketsPage } from "@/features/tickets/TicketsPage";
+import { firstQuery } from "@/lib/utils/query";
 import { isLocale, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 
@@ -14,6 +15,11 @@ export async function generateMetadata({
   return { title: dict.ticketsPage.title };
 }
 
-export default function Page() {
-  return <TicketsPage />;
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ ticket?: string }>;
+}) {
+  const sp = await searchParams;
+  return <TicketsPage initialTicketId={firstQuery(sp.ticket)} />;
 }

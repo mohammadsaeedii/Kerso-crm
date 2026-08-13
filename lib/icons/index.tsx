@@ -8,6 +8,8 @@ import {
   ArrowUpDown,
   Bell,
   BellOff,
+  Book,
+  Bot,
   Briefcase,
   Building2,
   Calendar,
@@ -37,6 +39,7 @@ import {
   Globe,
   GripVertical,
   Heart,
+  Inbox,
   Info,
   Kanban,
   LayoutDashboard,
@@ -53,6 +56,8 @@ import {
   Moon,
   Palette,
   PanelLeft,
+  PanelRight,
+  Paperclip,
   Pencil,
   Phone,
   Plus,
@@ -66,6 +71,7 @@ import {
   Sun,
   Tag,
   Target,
+  Ticket,
   ThumbsUp,
   Trash2,
   TrendingDown,
@@ -75,6 +81,7 @@ import {
   User,
   Users,
   X,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -84,6 +91,12 @@ const ICONS = {
   analytics: Monitor,
   customers: Users,
   reviews: Star,
+  inbox: Inbox,
+  ticket: Ticket,
+  bot: Bot,
+  book: Book,
+  zap: Zap,
+  "panel-right": PanelRight,
   sidebar: PanelLeft,
   search: Search,
   bell: Bell,
@@ -154,6 +167,7 @@ const ICONS = {
   lock: Lock,
   shield: Shield,
   palette: Palette,
+  paperclip: Paperclip,
 } as const;
 
 export type IconName = keyof typeof ICONS;

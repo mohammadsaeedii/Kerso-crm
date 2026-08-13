@@ -5,6 +5,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import { useRouter } from "next/navigation";
 import { PageHead } from "@/components/ui/PageHead";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -25,29 +26,93 @@ import { Icon, type IconName } from "@/lib/icons";
 import { useData } from "@/hooks/useData";
 import { useI18n } from "@/hooks/useI18n";
 import { useToast } from "@/hooks/useToast";
+import { useRecordQuery } from "@/hooks/useRecordQuery";
 import { localizedPath } from "@/lib/i18n/navigation";
-import { useRouter } from "next/navigation";
 import {
   customerStatusLabel,
   dealStageLabel,
   dealStatusLabel,
   tagLabel,
 } from "@/lib/data/labels";
+import {
+  companyName,
+  dealsForCustomer,
+  notesForCustomer,
+  tasksForCustomer,
+  teamMemberAvatar,
+  teamMemberById,
+  timelineForCustomer,
+} from "@/lib/data/relations";
 import { getAppNow } from "@/lib/utils/time";
-import type { Customer, CustomerStatus } from "@/types";
+import type { AppData, Customer, CustomerStatus, TimelineEvent } from "@/types";
+import type { Dictionary } from "@/lib/i18n/get-dictionary";
 import { cn } from "@/lib/utils/cn";
 
-type Note = { body: string; time: Date };
+const TIMELINE_ICON: Record<TimelineEvent["type"], IconName> = {
+  conversation_created: "message",
+  message_received: "message",
+  ticket_created: "flag",
+  deal_created: "briefcase",
+  deal_stage_changed: "briefcase",
+  task_created: "check",
+  note_added: "edit",
+  customer_created: "user",
+  customer_updated: "user",
+};
 
-const ACT_ICON = {
-  deal: "briefcase",
-  review: "star",
-  customer: "user",
-  task: "check",
-  message: "message",
-} as const;
+function timelineLabel(
+  event: TimelineEvent,
+  data: AppData,
+  dict: Dictionary,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string {
+  switch (event.type) {
+    case "conversation_created":
+    case "message_received": {
+      const conv = data.conversations.find((c) => c.id === event.conversationId);
+      return t(`customers.timeline.${event.type}`, {
+        title: conv?.subject ?? event.conversationId,
+      });
+    }
+    case "ticket_created": {
+      const ticket = data.tickets.find((tk) => tk.id === event.ticketId);
+      return t("customers.timeline.ticket_created", {
+        title: ticket?.title ?? event.ticketId,
+      });
+    }
+    case "deal_created": {
+      const deal = data.deals.find((d) => d.id === event.dealId);
+      return t("customers.timeline.deal_created", {
+        title: deal?.title ?? event.dealId,
+      });
+    }
+    case "deal_stage_changed": {
+      const deal = data.deals.find((d) => d.id === event.dealId);
+      return t("customers.timeline.deal_stage_changed", {
+        title: deal?.title ?? event.dealId,
+        stage: dealStageLabel(dict, event.toStage),
+      });
+    }
+    case "task_created": {
+      const task = data.tasks.find((tk) => tk.id === event.taskId);
+      return t("customers.timeline.task_created", {
+        title: task?.title ?? event.taskId,
+      });
+    }
+    case "note_added":
+      return dict.customers.timeline.note_added;
+    case "customer_created":
+      return dict.customers.timeline.customer_created;
+    case "customer_updated":
+      return dict.customers.timeline.customer_updated;
+  }
+}
 
-export function CustomersPage() {
+export function CustomersPage({
+  initialCustomerId = null,
+}: {
+  initialCustomerId?: string | null;
+}) {
   const { locale, dict, t, fmt } = useI18n();
   const {
     data,
@@ -55,15 +120,16 @@ export function CustomersPage() {
     updateCustomer,
     removeCustomer,
     removeCustomers,
+    addDeal,
+    addNote,
   } = useData();
   const { toast } = useToast();
   const router = useRouter();
+  const [customerId, setCustomerId] = useRecordQuery("customer", initialCustomerId);
 
   const [status, setStatus] = useState("all");
   const [q, setQ] = useState("");
-  const [customer, setCustomer] = useState<Customer | null>(null);
   const [drawerTab, setDrawerTab] = useState("ov");
-  const [notes, setNotes] = useState<Note[]>([]);
   const [noteText, setNoteText] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
@@ -71,7 +137,7 @@ export function CustomersPage() {
     name: "",
     email: "",
     phone: "",
-    company: "",
+    companyId: "",
     status: "lead" as CustomerStatus,
     city: "",
     country: "",
@@ -87,6 +153,9 @@ export function CustomersPage() {
     row: Customer;
     anchor: HTMLElement;
   } | null>(null);
+
+  const customer =
+    data.customers.find((c) => c.id === customerId) ?? null;
 
   const counts = useMemo(() => {
     const by = (s: CustomerStatus) =>
@@ -126,24 +195,27 @@ export function CustomersPage() {
     }
     if (q.trim()) {
       const needle = q.trim().toLowerCase();
-      list = list.filter(
-        (c) =>
+      list = list.filter((c) => {
+        const company = companyName(data.companies, c.companyId, "");
+        return (
           c.name.toLowerCase().includes(needle) ||
           c.email.toLowerCase().includes(needle) ||
-          c.company.toLowerCase().includes(needle) ||
-          c.city.toLowerCase().includes(needle),
-      );
+          company.toLowerCase().includes(needle) ||
+          c.city.toLowerCase().includes(needle)
+        );
+      });
     }
     return list;
-  }, [data.customers, status, q]);
+  }, [data.customers, data.companies, status, q]);
 
   const openDrawer = (c: Customer) => {
-    setCustomer(c);
+    setCustomerId(c.id);
     setDrawerTab("ov");
-    setNotes([]);
     setNoteText("");
     setMenu(null);
   };
+
+  const closeDrawer = () => setCustomerId(null);
 
   const openForm = (existing: Customer | null) => {
     setEditing(existing);
@@ -153,7 +225,7 @@ export function CustomersPage() {
             name: existing.name,
             email: existing.email,
             phone: existing.phone,
-            company: existing.company,
+            companyId: existing.companyId ?? "",
             status: existing.status,
             city: existing.city,
             country: existing.country,
@@ -162,7 +234,7 @@ export function CustomersPage() {
             name: "",
             email: "",
             phone: "",
-            company: "",
+            companyId: "",
             status: "lead",
             city: "",
             country: "",
@@ -184,12 +256,14 @@ export function CustomersPage() {
     setFormErrors(errors);
     if (Object.keys(errors).length) return;
 
+    const companyId = form.companyId || undefined;
+
     if (editing) {
       updateCustomer(editing.id, {
         name: form.name.trim(),
         email: form.email.trim(),
         phone: form.phone.trim(),
-        company: form.company.trim() || "—",
+        companyId,
         status: form.status,
         city: form.city.trim() || "—",
         country: form.country.trim() || "—",
@@ -198,23 +272,12 @@ export function CustomersPage() {
         type: "success",
         desc: form.name.trim(),
       });
-      if (customer?.id === editing.id) {
-        setCustomer({
-          ...customer,
-          ...form,
-          name: form.name.trim(),
-          email: form.email.trim(),
-          company: form.company.trim() || "—",
-          city: form.city.trim() || "—",
-          country: form.country.trim() || "—",
-        });
-      }
     } else {
       const row = addCustomer({
         name: form.name.trim(),
         email: form.email.trim(),
         phone: form.phone.trim(),
-        company: form.company.trim() || "—",
+        companyId,
         status: form.status,
         city: form.city.trim() || "—",
         country: form.country.trim() || "—",
@@ -222,7 +285,7 @@ export function CustomersPage() {
         deals: 0,
         health: 60,
         avatar: data.avatarColor(),
-        owner: data.currentUser.name,
+        ownerId: data.currentUser.id,
         tags: ["inbound"],
         joined: getAppNow(),
         lastContact: getAppNow(),
@@ -236,9 +299,68 @@ export function CustomersPage() {
     setFormOpen(false);
   };
 
-  const dealsFor = customer
-    ? data.deals.filter((d) => d.company === customer.company)
+  const dealsFor = customer ? dealsForCustomer(data.deals, customer.id) : [];
+  const notes = customer ? notesForCustomer(data.notes, customer.id) : [];
+  const openTasks = customer
+    ? tasksForCustomer(data.tasks, customer.id).filter((tk) => !tk.done)
     : [];
+  const customerConversations = customer
+    ? data.conversations
+        .filter((c) => c.customerId === customer.id)
+        .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+    : [];
+  const customerTickets = customer
+    ? data.tickets.filter((tk) => tk.customerId === customer.id)
+    : [];
+  const customerTimeline = customer
+    ? timelineForCustomer(data.timeline, customer.id)
+    : [];
+  const companyLabel = customer
+    ? companyName(data.companies, customer.companyId)
+    : "—";
+  const owner = customer
+    ? teamMemberById(data.teamMembers, customer.ownerId)
+    : undefined;
+
+  const createLinkedDeal = () => {
+    if (!customer) return;
+    const row = addDeal({
+      title: t("customers.newDealTitle", { name: customer.name }),
+      customerId: customer.id,
+      companyId: customer.companyId,
+      ownerId: data.currentUser.id,
+      value: 10000,
+      stage: "lead",
+      probability: 20,
+      close: getAppNow(),
+      status: "open",
+    });
+    setDrawerTab("dl");
+    toast(dict.customers.dealCreated, { type: "success", desc: row.title });
+  };
+
+  const onTimelineClick = (event: TimelineEvent) => {
+    switch (event.type) {
+      case "conversation_created":
+      case "message_received":
+        router.push(
+          localizedPath(locale, `/inbox?conversation=${event.conversationId}`),
+        );
+        break;
+      case "ticket_created":
+        router.push(localizedPath(locale, `/tickets?ticket=${event.ticketId}`));
+        break;
+      case "deal_created":
+      case "deal_stage_changed":
+        router.push(localizedPath(locale, `/dashboard?deal=${event.dealId}`));
+        break;
+      case "note_added":
+        setDrawerTab("nt");
+        break;
+      default:
+        break;
+    }
+  };
 
   return (
     <>
@@ -374,7 +496,12 @@ export function CustomersPage() {
                 </span>
               ),
             },
-            { key: "company", label: dict.customers.company },
+            {
+              key: "company",
+              label: dict.customers.company,
+              sortVal: (c) => companyName(data.companies, c.companyId),
+              render: (c) => companyName(data.companies, c.companyId),
+            },
             {
               key: "status",
               label: dict.customers.status,
@@ -475,7 +602,7 @@ export function CustomersPage() {
 
       <Drawer
         open={!!customer}
-        onClose={() => setCustomer(null)}
+        onClose={closeDrawer}
         width={500}
         head={
           customer ? (
@@ -483,7 +610,7 @@ export function CustomersPage() {
               <Avatar name={customer.name} color={customer.avatar} size={48} />
               <div className="drawer-id__main">
                 <h2 className="drawer__title">{customer.name}</h2>
-                <p className="drawer-id__sub">{customer.company}</p>
+                <p className="drawer-id__sub">{companyLabel}</p>
               </div>
               <Badge statusKey={customer.status}>
                 {customerStatusLabel(dict, customer.status)}
@@ -497,7 +624,7 @@ export function CustomersPage() {
               <Button
                 icon="edit"
                 onClick={() => {
-                  setCustomer(null);
+                  closeDrawer();
                   openForm(customer);
                 }}
               >
@@ -507,9 +634,9 @@ export function CustomersPage() {
                 variant="primary"
                 icon="message"
                 onClick={() =>
-                  toast(t("customers.messageTo", { name: customer.name }), {
-                    type: "info",
-                  })
+                  router.push(
+                    localizedPath(locale, `/inbox?customer=${customer.id}`),
+                  )
                 }
               >
                 {dict.customers.message}
@@ -548,10 +675,10 @@ export function CustomersPage() {
               <button
                 type="button"
                 className="drawer-quick__btn"
-                onClick={() => router.push(localizedPath(locale, "/inbox"))}
+                onClick={createLinkedDeal}
               >
-                <Icon name="inbox" size={18} />
-                <span>{dict.nav.inbox}</span>
+                <Icon name="briefcase" size={18} />
+                <span>{dict.customers.deal}</span>
               </button>
             </div>
 
@@ -567,7 +694,17 @@ export function CustomersPage() {
                     count: dealsFor.length,
                   },
                   { value: "ac", label: dict.customers.activity },
-                  { value: "nt", label: dict.customers.notes },
+                  { value: "nt", label: dict.customers.notes, count: notes.length },
+                  {
+                    value: "cv",
+                    label: dict.customers.conversations,
+                    count: customerConversations.length,
+                  },
+                  {
+                    value: "tk",
+                    label: dict.customers.tickets,
+                    count: customerTickets.length,
+                  },
                 ]}
               />
 
@@ -585,10 +722,20 @@ export function CustomersPage() {
                     <DetailRow label={dict.customers.location}>
                       {customer.city}, {customer.country}
                     </DetailRow>
+                    <DetailRow label={dict.customers.company}>
+                      {companyLabel}
+                    </DetailRow>
                     <DetailRow label={dict.customers.owner}>
                       <span className="cell-user">
-                        <Avatar name={customer.owner} color="indigo" size={22} />
-                        {customer.owner}
+                        <Avatar
+                          name={owner?.name ?? "—"}
+                          color={teamMemberAvatar(
+                            data.teamMembers,
+                            customer.ownerId,
+                          )}
+                          size={22}
+                        />
+                        {owner?.name ?? "—"}
                       </span>
                     </DetailRow>
                     <DetailRow label={dict.customers.lifetimeValue}>
@@ -624,6 +771,130 @@ export function CustomersPage() {
                       </div>
                     </div>
                   </div>
+                  {dealsFor.length ? (
+                    <>
+                      <h4 className="drawer-section">{dict.customers.deals}</h4>
+                      <ul className="mini-list">
+                        {dealsFor.slice(0, 3).map((d) => (
+                          <li key={d.id}>
+                            <button
+                              type="button"
+                              className="mini-list__item"
+                              onClick={() =>
+                                router.push(
+                                  localizedPath(
+                                    locale,
+                                    `/dashboard?deal=${d.id}`,
+                                  ),
+                                )
+                              }
+                            >
+                              <span className="mini-list__icon">
+                                <Icon name="briefcase" size={16} />
+                              </span>
+                              <div className="mini-list__main">
+                                <div className="cell-strong">{d.title}</div>
+                                <div className="cell-sub">
+                                  {fmt.money(d.value)} ·{" "}
+                                  {dealStageLabel(dict, d.stage)}
+                                </div>
+                              </div>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : null}
+                  {openTasks.length ? (
+                    <>
+                      <h4 className="drawer-section">
+                        {dict.customers.openTasks}
+                      </h4>
+                      <ul className="mini-list">
+                        {openTasks.slice(0, 3).map((tk) => (
+                          <li key={tk.id} className="mini-list__item">
+                            <span className="mini-list__icon">
+                              <Icon name="check" size={16} />
+                            </span>
+                            <div className="mini-list__main">
+                              <div className="cell-strong">{tk.title}</div>
+                              <div className="cell-sub">
+                                {fmt.relTime(tk.due)}
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : null}
+                  {customerConversations.length ? (
+                    <>
+                      <h4 className="drawer-section">
+                        {dict.customers.recentConversations}
+                      </h4>
+                      <ul className="mini-list">
+                        {customerConversations.slice(0, 3).map((c) => (
+                          <li key={c.id}>
+                            <button
+                              type="button"
+                              className="mini-list__item"
+                              onClick={() =>
+                                router.push(
+                                  localizedPath(
+                                    locale,
+                                    `/inbox?conversation=${c.id}`,
+                                  ),
+                                )
+                              }
+                            >
+                              <span className="mini-list__icon">
+                                <Icon name="message" size={16} />
+                              </span>
+                              <div className="mini-list__main">
+                                <div className="cell-strong">{c.subject}</div>
+                                <div className="cell-sub">
+                                  {fmt.relTime(c.updatedAt)}
+                                </div>
+                              </div>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : null}
+                  {customerTimeline.length ? (
+                    <>
+                      <h4 className="drawer-section">
+                        {dict.customers.activity}
+                      </h4>
+                      <ul className="act-list act-list--compact">
+                        {customerTimeline.slice(0, 4).map((event) => (
+                          <li key={event.id}>
+                            <button
+                              type="button"
+                              className="act"
+                              onClick={() => onTimelineClick(event)}
+                            >
+                              <span className="act__dot act__dot--indigo">
+                                <Icon
+                                  name={TIMELINE_ICON[event.type]}
+                                  size={13}
+                                />
+                              </span>
+                              <div className="act__body">
+                                <p className="act__text">
+                                  {timelineLabel(event, data, dict, t)}
+                                </p>
+                                <span className="act__time">
+                                  {fmt.relTime(event.createdAt)}
+                                </span>
+                              </div>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -632,20 +903,30 @@ export function CustomersPage() {
                   {dealsFor.length ? (
                     <ul className="mini-list">
                       {dealsFor.map((d) => (
-                        <li key={d.id} className="mini-list__item">
-                          <span className="mini-list__icon">
-                            <Icon name="briefcase" size={16} />
-                          </span>
-                          <div className="mini-list__main">
-                            <div className="cell-strong">{d.title}</div>
-                            <div className="cell-sub">
-                              {fmt.money(d.value)} ·{" "}
-                              {dealStageLabel(dict, d.stage)}
+                        <li key={d.id}>
+                          <button
+                            type="button"
+                            className="mini-list__item"
+                            onClick={() =>
+                              router.push(
+                                localizedPath(locale, `/dashboard?deal=${d.id}`),
+                              )
+                            }
+                          >
+                            <span className="mini-list__icon">
+                              <Icon name="briefcase" size={16} />
+                            </span>
+                            <div className="mini-list__main">
+                              <div className="cell-strong">{d.title}</div>
+                              <div className="cell-sub">
+                                {fmt.money(d.value)} ·{" "}
+                                {dealStageLabel(dict, d.stage)}
+                              </div>
                             </div>
-                          </div>
-                          <Badge statusKey={d.status}>
-                            {dealStatusLabel(dict, d.status)}
-                          </Badge>
+                            <Badge statusKey={d.status}>
+                              {dealStatusLabel(dict, d.status)}
+                            </Badge>
+                          </button>
                         </li>
                       ))}
                     </ul>
@@ -661,23 +942,40 @@ export function CustomersPage() {
 
               {drawerTab === "ac" ? (
                 <div className="tabpane">
-                  <ul className="act-list">
-                    {data.activities.slice(0, 5).map((a, i) => (
-                      <li key={i} className="act">
-                        <span className={`act__dot act__dot--${a.color}`}>
-                          <Icon name={ACT_ICON[a.type] || "info"} size={13} />
-                        </span>
-                        <div className="act__body">
-                          <p className="act__text">
-                            <b>{a.who}</b> {a.text}
-                          </p>
-                          <span className="act__time">
-                            {fmt.relTime(a.time)}
-                          </span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  {customerTimeline.length ? (
+                    <ul className="act-list">
+                      {customerTimeline.map((event) => (
+                        <li key={event.id}>
+                          <button
+                            type="button"
+                            className="act"
+                            onClick={() => onTimelineClick(event)}
+                          >
+                            <span className="act__dot act__dot--indigo">
+                              <Icon
+                                name={TIMELINE_ICON[event.type]}
+                                size={13}
+                              />
+                            </span>
+                            <div className="act__body">
+                              <p className="act__text">
+                                {timelineLabel(event, data, dict, t)}
+                              </p>
+                              <span className="act__time">
+                                {fmt.relTime(event.createdAt)}
+                              </span>
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <EmptyState
+                      icon="clock"
+                      title={dict.customers.noActivity}
+                      desc={dict.customers.noActivityDesc}
+                    />
+                  )}
                 </div>
               ) : null}
 
@@ -687,22 +985,31 @@ export function CustomersPage() {
                     {!notes.length ? (
                       <p className="notes__empty">{dict.customers.noNotes}</p>
                     ) : (
-                      notes.map((n, i) => (
-                        <div key={i} className="note">
-                          <div className="note__head">
-                            <Avatar
-                              name={data.currentUser.name}
-                              color="indigo"
-                              size={26}
-                            />
-                            <b>{data.currentUser.name}</b>
-                            <span className="note__time">
-                              {fmt.relTime(n.time)}
-                            </span>
+                      notes.map((n) => {
+                        const author = teamMemberById(
+                          data.teamMembers,
+                          n.authorId,
+                        );
+                        return (
+                          <div key={n.id} className="note">
+                            <div className="note__head">
+                              <Avatar
+                                name={author?.name ?? data.currentUser.name}
+                                color={teamMemberAvatar(
+                                  data.teamMembers,
+                                  n.authorId,
+                                )}
+                                size={26}
+                              />
+                              <b>{author?.name ?? data.currentUser.name}</b>
+                              <span className="note__time">
+                                {fmt.relTime(n.createdAt)}
+                              </span>
+                            </div>
+                            <p className="note__body">{n.body}</p>
                           </div>
-                          <p className="note__body">{n.body}</p>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                   <form
@@ -711,10 +1018,12 @@ export function CustomersPage() {
                       e.preventDefault();
                       const v = noteText.trim();
                       if (!v) return;
-                      setNotes((prev) => [
-                        { body: v, time: getAppNow() },
-                        ...prev,
-                      ]);
+                      addNote({
+                        body: v,
+                        customerId: customer.id,
+                        companyId: customer.companyId,
+                        authorId: data.currentUser.id,
+                      });
                       setNoteText("");
                       toast(dict.customers.noteAdded, { type: "success" });
                     }}
@@ -732,6 +1041,87 @@ export function CustomersPage() {
                       {dict.customers.addNote}
                     </Button>
                   </form>
+                </div>
+              ) : null}
+
+              {drawerTab === "cv" ? (
+                <div className="tabpane">
+                  {customerConversations.length ? (
+                    <ul className="mini-list">
+                      {customerConversations.map((c) => (
+                        <li key={c.id}>
+                          <button
+                            type="button"
+                            className="mini-list__item"
+                            onClick={() =>
+                              router.push(
+                                localizedPath(
+                                  locale,
+                                  `/inbox?conversation=${c.id}`,
+                                ),
+                              )
+                            }
+                          >
+                            <span className="mini-list__icon">
+                              <Icon name="message" size={16} />
+                            </span>
+                            <div className="mini-list__main">
+                              <div className="cell-strong">{c.subject}</div>
+                              <div className="cell-sub">
+                                {dict.inbox.status[c.status]} ·{" "}
+                                {fmt.relTime(c.updatedAt)}
+                              </div>
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <EmptyState
+                      icon="message"
+                      title={dict.customers.noConversations}
+                      desc={dict.customers.noConversationsDesc}
+                    />
+                  )}
+                </div>
+              ) : null}
+
+              {drawerTab === "tk" ? (
+                <div className="tabpane">
+                  {customerTickets.length ? (
+                    <ul className="mini-list">
+                      {customerTickets.map((tk) => (
+                        <li key={tk.id}>
+                          <button
+                            type="button"
+                            className="mini-list__item"
+                            onClick={() =>
+                              router.push(
+                                localizedPath(locale, `/tickets?ticket=${tk.id}`),
+                              )
+                            }
+                          >
+                            <span className="mini-list__icon">
+                              <Icon name="flag" size={16} />
+                            </span>
+                            <div className="mini-list__main">
+                              <div className="cell-strong">{tk.title}</div>
+                              <div className="cell-sub">
+                                {dict.ticketsPage.status[tk.status]} ·{" "}
+                                {fmt.relTime(tk.updatedAt)}
+                              </div>
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <EmptyState
+                      icon="flag"
+                      title={dict.customers.noTickets}
+                      desc={dict.customers.noTicketsDesc}
+                    />
+                  )}
                 </div>
               ) : null}
             </div>
@@ -786,12 +1176,19 @@ export function CustomersPage() {
             onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
           />
           <Field
+            as="select"
             label={dict.customers.company}
             name="company"
-            placeholder={dict.customers.placeholderCompany}
-            value={form.company}
+            options={[
+              { value: "", label: dict.customers.noCompany },
+              ...data.companies.map((c) => ({
+                value: c.id,
+                label: c.name,
+              })),
+            ]}
+            value={form.companyId}
             onChange={(e) =>
-              setForm((f) => ({ ...f, company: e.target.value }))
+              setForm((f) => ({ ...f, companyId: e.target.value }))
             }
           />
           <Field
@@ -843,7 +1240,7 @@ export function CustomersPage() {
         onConfirm={() => {
           if (!deleteTarget) return;
           removeCustomer(deleteTarget.id);
-          if (customer?.id === deleteTarget.id) setCustomer(null);
+          if (customer?.id === deleteTarget.id) closeDrawer();
           toast(dict.customers.customerDeleted, {
             type: "success",
             desc: deleteTarget.name,

@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useData } from "@/hooks/useData";
 import { useI18n } from "@/hooks/useI18n";
 import { useToast } from "@/hooks/useToast";
+import { useRecordQuery } from "@/hooks/useRecordQuery";
 import { Icon } from "@/lib/icons";
 import { localizedPath } from "@/lib/i18n/navigation";
+import { companyName, teamMemberName } from "@/lib/data/relations";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -23,13 +25,23 @@ const STATUS_VARIANT: Record<ConversationStatus, string> = {
   closed: "neutral",
 };
 
-export function InboxPage() {
+export function InboxPage({
+  initialConversation = null,
+  initialCustomer = null,
+}: {
+  initialConversation?: string | null;
+  initialCustomer?: string | null;
+}) {
   const { locale, t, fmt, dict } = useI18n();
   const { data, updateConversation, appendMessage } = useData();
   const { toast } = useToast();
   const [filter, setFilter] = useState<InboxFilter>("all");
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useRecordQuery(
+    "conversation",
+    initialConversation,
+  );
+  const [customerParam] = useRecordQuery("customer", initialCustomer);
   const [composerMode, setComposerMode] = useState<ComposerMode>("reply");
   const [draft, setDraft] = useState("");
   const [mobilePane, setMobilePane] = useState<MobilePane>("list");
@@ -56,17 +68,33 @@ export function InboxPage() {
           c.subject.toLowerCase().includes(q) ||
           c.preview.toLowerCase().includes(q) ||
           cust?.name.toLowerCase().includes(q) ||
-          cust?.company.toLowerCase().includes(q)
+          companyName(data.companies, cust?.companyId, "")
+            .toLowerCase()
+            .includes(q)
         );
       })
       .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-  }, [data.conversations, data.customers, filter, query, agentName]);
+  }, [data.conversations, data.customers, data.companies, filter, query, agentName]);
 
   useEffect(() => {
-    if (!selectedId && filtered[0]) setSelectedId(filtered[0].id);
-  }, [filtered, selectedId]);
+    if (conversationId && data.conversations.some((c) => c.id === conversationId)) {
+      return;
+    }
+    if (customerParam) {
+      const first = data.conversations.find((c) => c.customerId === customerParam);
+      if (first) setConversationId(first.id);
+      return;
+    }
+    if (filtered[0]) setConversationId(filtered[0].id);
+  }, [
+    conversationId,
+    customerParam,
+    data.conversations,
+    filtered,
+    setConversationId,
+  ]);
 
-  const selected = data.conversations.find((c) => c.id === selectedId) ?? null;
+  const selected = data.conversations.find((c) => c.id === conversationId) ?? null;
   const customer = selected
     ? data.customers.find((c) => c.id === selected.customerId) ?? null
     : null;
@@ -85,7 +113,7 @@ export function InboxPage() {
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [selected?.messages.length, selectedId]);
+  }, [selected?.messages.length, conversationId]);
 
   const counts = useMemo(() => {
     const all = data.conversations.length;
@@ -97,7 +125,7 @@ export function InboxPage() {
   }, [data.conversations, agentName]);
 
   const selectConversation = (id: string) => {
-    setSelectedId(id);
+    setConversationId(id);
     setMobilePane("thread");
     updateConversation(id, { unread: false });
   };
@@ -204,7 +232,7 @@ export function InboxPage() {
                   type="button"
                   className={cn(
                     "conv-row",
-                    selectedId === c.id && "is-active",
+                    conversationId === c.id && "is-active",
                     c.unread && "is-unread",
                   )}
                   onClick={() => selectConversation(c.id)}
@@ -444,9 +472,11 @@ export function InboxPage() {
             <div className="ctx-profile">
               <Avatar name={customer.name} color={customer.avatar} size={56} />
               <p className="ctx-profile__name">{customer.name}</p>
-              <p className="ctx-profile__company">{customer.company}</p>
+              <p className="ctx-profile__company">
+                {companyName(data.companies, customer.companyId)}
+              </p>
               <Link
-                href={localizedPath(locale, "/customers")}
+                href={localizedPath(locale, `/customers?customer=${customer.id}`)}
                 className="link ctx-profile__link"
               >
                 {dict.customers.viewProfile}
@@ -479,7 +509,7 @@ export function InboxPage() {
                   <dt>
                     <Icon name="user" size={14} /> {dict.customers.owner}
                   </dt>
-                  <dd>{customer.owner}</dd>
+                  <dd>{teamMemberName(data.teamMembers, customer.ownerId)}</dd>
                 </div>
               </dl>
             </div>
@@ -524,7 +554,7 @@ export function InboxPage() {
                   {customerTickets.map((tk) => (
                     <li key={tk.id}>
                       <Link
-                        href={localizedPath(locale, "/tickets")}
+                        href={localizedPath(locale, `/tickets?ticket=${tk.id}`)}
                         className="ctx-list__item"
                       >
                         <span className="ctx-list__title">{tk.title}</span>

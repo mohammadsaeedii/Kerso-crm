@@ -14,6 +14,7 @@ import { Icon, type IconName } from "@/lib/icons";
 import { useData } from "@/hooks/useData";
 import { useI18n } from "@/hooks/useI18n";
 import { localizedPath } from "@/lib/i18n/navigation";
+import { companyName } from "@/lib/data/relations";
 import { cn } from "@/lib/utils/cn";
 
 type SearchItem = {
@@ -66,19 +67,21 @@ export function CommandSearch() {
 
     if (q) {
       const cust = data.customers
-        .filter(
-          (c) =>
+        .filter((c) => {
+          const company = companyName(data.companies, c.companyId, "");
+          return (
             c.name.toLowerCase().includes(q) ||
-            c.company.toLowerCase().includes(q) ||
-            c.email.toLowerCase().includes(q),
-        )
+            company.toLowerCase().includes(q) ||
+            c.email.toLowerCase().includes(q)
+          );
+        })
         .slice(0, 4)
         .map((c) => ({
           type: "customer" as const,
           id: c.id,
           label: c.name,
           icon: "user" as const,
-          sub: c.company,
+          sub: companyName(data.companies, c.companyId),
         }));
       if (cust.length) out.push({ label: t("shell.commandCustomers"), items: cust });
 
@@ -99,18 +102,20 @@ export function CommandSearch() {
       if (comp.length) out.push({ label: t("shell.commandCompanies"), items: comp });
 
       const deals = data.deals
-        .filter(
-          (d) =>
+        .filter((d) => {
+          const company = companyName(data.companies, d.companyId, "");
+          return (
             d.title.toLowerCase().includes(q) ||
-            d.company.toLowerCase().includes(q),
-        )
+            company.toLowerCase().includes(q)
+          );
+        })
         .slice(0, 4)
         .map((d) => ({
           type: "deal" as const,
           id: d.id,
           label: d.title,
           icon: "briefcase" as const,
-          sub: `${d.company} · ${fmt.money(d.value)}`,
+          sub: `${companyName(data.companies, d.companyId)} · ${fmt.money(d.value)}`,
         }));
       if (deals.length) out.push({ label: t("shell.commandDeals"), items: deals });
     }
@@ -154,11 +159,11 @@ export function CommandSearch() {
     if (item.type === "page") {
       router.push(localizedPath(locale, `/${item.id}`));
     } else if (item.type === "customer") {
-      router.push(localizedPath(locale, "/customers"));
+      router.push(localizedPath(locale, `/customers?customer=${item.id}`));
     } else if (item.type === "company") {
-      router.push(localizedPath(locale, "/explore"));
+      router.push(localizedPath(locale, `/explore?company=${item.id}`));
     } else {
-      router.push(localizedPath(locale, "/dashboard"));
+      router.push(localizedPath(locale, `/dashboard?deal=${item.id}`));
     }
   };
 

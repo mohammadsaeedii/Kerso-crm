@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { InboxPage } from "@/features/inbox/InboxPage";
+import { firstQuery } from "@/lib/utils/query";
 import { isLocale, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 
@@ -14,6 +15,16 @@ export async function generateMetadata({
   return { title: dict.inbox.title };
 }
 
-export default function Page() {
-  return <InboxPage />;
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ conversation?: string; customer?: string }>;
+}) {
+  const sp = await searchParams;
+  return (
+    <InboxPage
+      initialConversation={firstQuery(sp.conversation)}
+      initialCustomer={firstQuery(sp.customer)}
+    />
+  );
 }

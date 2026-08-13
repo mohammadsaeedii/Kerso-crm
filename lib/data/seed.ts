@@ -11,6 +11,9 @@ import {
   monthLabel,
 } from "@/lib/data/labels";
 import { createSupportSeed } from "@/lib/data/support-seed";
+import { recountStats } from "@/lib/data/relations";
+import { buildSeedTimeline } from "@/lib/data/timeline";
+import { CHART, CHART_PALETTE } from "@/components/charts/palette";
 import type {
   Activity,
   AppData,
@@ -23,10 +26,12 @@ import type {
   Deal,
   Kpi,
   Message,
+  Note,
   Notification,
   Review,
   TagKey,
   Task,
+  TeamMember,
 } from "@/types";
 
 const AVATARS = [
@@ -353,8 +358,40 @@ export function createSeedData(locale: Locale): AppData {
 
   const currentUser = {
     ...pools.currentUser,
+    id: "TM-1",
     avatar: "face" as const,
   };
+
+  const teamMembers: TeamMember[] =
+    locale === "fa"
+      ? [
+          {
+            id: "TM-1",
+            name: pools.currentUser.name,
+            email: pools.currentUser.email,
+            avatar: "face",
+            role: pools.currentUser.role,
+          },
+          { id: "TM-2", name: "محمد نوری", email: "mohammad.nouri@kerso.io", avatar: "emerald", role: "فروش" },
+          { id: "TM-3", name: "مریم جعفری", email: "maryam.jafari@kerso.io", avatar: "violet", role: "فروش" },
+          { id: "TM-4", name: "علی کریمی", email: "ali.karimi@kerso.io", avatar: "blue", role: "فروش" },
+          { id: "TM-5", name: "لیلا رستمی", email: "leila.rostami@kerso.io", avatar: "rose", role: "موفقیت مشتری" },
+          { id: "TM-6", name: "امیر عباسی", email: "amir.abbasi@kerso.io", avatar: "teal", role: "پشتیبانی" },
+        ]
+      : [
+          {
+            id: "TM-1",
+            name: pools.currentUser.name,
+            email: pools.currentUser.email,
+            avatar: "face",
+            role: pools.currentUser.role,
+          },
+          { id: "TM-2", name: "Noah Patel", email: "noah.patel@kerso.io", avatar: "emerald", role: "Sales" },
+          { id: "TM-3", name: "Ava Garcia", email: "ava.garcia@kerso.io", avatar: "violet", role: "Sales" },
+          { id: "TM-4", name: "Liam Carter", email: "liam.carter@kerso.io", avatar: "blue", role: "Sales" },
+          { id: "TM-5", name: "Ella Rossi", email: "ella.rossi@kerso.io", avatar: "rose", role: "Success" },
+          { id: "TM-6", name: "Omar Haddad", email: "omar.haddad@kerso.io", avatar: "teal", role: "Support" },
+        ];
 
   const kpis: Kpi[] = [
     {
@@ -426,61 +463,6 @@ export function createSeedData(locale: Locale): AppData {
     { stage: "won" as const, count: 27, value: 120300, color: CHART.up },
   ];
 
-  const deals: Deal[] = pools.dealNames.map((title, i) => {
-    const company = pick(pools.companies);
-    const stage = pick(DEAL_STAGES);
-    return {
-      id: "D-" + (1042 + i),
-      title,
-      company,
-      owner: fullName(),
-      ownerColor: avatarColor(),
-      value: between(6, 90) * 1000,
-      stage,
-      probability: stage === "won" ? 100 : between(15, 90),
-      close: daysAgo(between(-30, 20)),
-      status: stage === "won" ? "won" : chance(0.12) ? "lost" : "open",
-    };
-  });
-
-  const customers: Customer[] = [];
-  for (let i = 0; i < 48; i++) {
-    const name = fullName();
-    const company = pick(pools.companies);
-    const [city, country] = pick(pools.cities);
-    const status: CustomerStatus = chance(0.5)
-      ? "active"
-      : pick(CUST_STATUSES);
-    customers.push({
-      id: "C-" + String(1000 + i),
-      name,
-      company,
-      email: emailFor(name, company),
-      phone: phone(),
-      city,
-      country,
-      status,
-      value: between(2, 240) * 1000,
-      deals: between(1, 9),
-      health: between(28, 99),
-      avatar: avatarColor(),
-      owner: fullName(),
-      tags: pickTags(),
-      joined: daysAgo(between(20, 900)),
-      lastContact: daysAgo(between(0, 60)),
-      rating: between(3, 5),
-    });
-  }
-  Object.assign(customers[0]!, {
-    name: pools.firstCustomer.name,
-    company: pools.firstCustomer.company,
-    status: "active" as const,
-    value: 184000,
-    deals: 7,
-    health: 92,
-    email: pools.firstCustomer.email,
-  });
-
   const companies: Company[] = pools.companies.map((name, i) => {
     const [city, country] = pick(pools.cities);
     const industry = pick(INDUSTRIES);
@@ -515,6 +497,73 @@ export function createSeedData(locale: Locale): AppData {
       description,
     };
   });
+
+  const customers: Customer[] = [];
+  for (let i = 0; i < 48; i++) {
+    const name = fullName();
+    const company = pick(companies);
+    const owner = pick(teamMembers);
+    const [city, country] = pick(pools.cities);
+    const status: CustomerStatus = chance(0.5)
+      ? "active"
+      : pick(CUST_STATUSES);
+    customers.push({
+      id: "C-" + String(1000 + i),
+      name,
+      companyId: company.id,
+      email: emailFor(name, company.name),
+      phone: phone(),
+      city,
+      country,
+      status,
+      value: between(2, 240) * 1000,
+      deals: 0,
+      health: between(28, 99),
+      avatar: avatarColor(),
+      ownerId: owner.id,
+      tags: pickTags(),
+      joined: daysAgo(between(20, 900)),
+      lastContact: daysAgo(between(0, 60)),
+      rating: between(3, 5),
+    });
+  }
+  const featuredCompany =
+    companies.find((c) => c.name === pools.firstCustomer.company) ?? companies[0]!;
+  Object.assign(customers[0]!, {
+    name: pools.firstCustomer.name,
+    companyId: featuredCompany.id,
+    status: "active" as const,
+    value: 184000,
+    health: 92,
+    email: pools.firstCustomer.email,
+    ownerId: currentUser.id,
+  });
+
+  const deals: Deal[] = pools.dealNames.map((title, i) => {
+    const customer = pick(customers);
+    const stage = pick(DEAL_STAGES);
+    const owner = pick(teamMembers);
+    return {
+      id: "D-" + (1042 + i),
+      title,
+      customerId: customer.id,
+      companyId: customer.companyId,
+      ownerId: owner.id,
+      value: between(6, 90) * 1000,
+      stage,
+      probability: stage === "won" ? 100 : between(15, 90),
+      close: daysAgo(between(-30, 20)),
+      status: stage === "won" ? "won" : chance(0.12) ? "lost" : "open",
+    };
+  });
+
+  for (const customer of customers) {
+    customer.deals = deals.filter((d) => d.customerId === customer.id).length;
+  }
+  for (const company of companies) {
+    company.deals = deals.filter((d) => d.companyId === company.id).length;
+    company.contacts = customers.filter((c) => c.companyId === company.id).length;
+  }
 
   const reviews: Review[] = [];
   for (let i = 0; i < 32; i++) {
@@ -668,22 +717,22 @@ export function createSeedData(locale: Locale): AppData {
   const tasks: Task[] =
     locale === "fa"
       ? [
-          { id: "T1", title: "پیگیری تمدید با نوآوران داده", due: daysAgo(-1), priority: "high", done: false, assignee: "آرش رضایی" },
-          { id: "T2", title: "آماده‌سازی پیشنهاد برای دیجی‌فردا", due: daysAgo(-2), priority: "high", done: false, assignee: "علی کریمی" },
-          { id: "T3", title: "بررسی حساب‌های در معرض ریزش", due: daysAgo(0), priority: "medium", done: false, assignee: "آرش رضایی" },
-          { id: "T4", title: "ارسال ارائهٔ راه‌اندازی به آرمان سیستم", due: daysAgo(-3), priority: "medium", done: false, assignee: "مریم جعفری" },
-          { id: "T5", title: "پاسخ به ۳ نظر جدید مشتریان", due: daysAgo(0), priority: "low", done: false, assignee: "آرش رضایی" },
-          { id: "T6", title: "به‌روزرسانی پیش‌بینی فصل دوم در قیف فروش", due: daysAgo(1), priority: "medium", done: true, assignee: "محمد نوری" },
-          { id: "T7", title: "هماهنگی دمو با هوش‌پرداز", due: daysAgo(-5), priority: "low", done: false, assignee: "آرش رضایی" },
+          { id: "T1", title: "پیگیری تمدید با نوآوران داده", due: daysAgo(-1), priority: "high", done: false, assignedTo: "TM-1", customerId: customers[0]!.id, companyId: customers[0]!.companyId },
+          { id: "T2", title: "آماده‌سازی پیشنهاد برای دیجی‌فردا", due: daysAgo(-2), priority: "high", done: false, assignedTo: "TM-4", customerId: customers[1]!.id, companyId: customers[1]!.companyId, dealId: deals[0]?.id },
+          { id: "T3", title: "بررسی حساب‌های در معرض ریزش", due: daysAgo(0), priority: "medium", done: false, assignedTo: "TM-1" },
+          { id: "T4", title: "ارسال ارائهٔ راه‌اندازی به آرمان سیستم", due: daysAgo(-3), priority: "medium", done: false, assignedTo: "TM-3", customerId: customers[2]!.id, companyId: customers[2]!.companyId },
+          { id: "T5", title: "پاسخ به ۳ نظر جدید مشتریان", due: daysAgo(0), priority: "low", done: false, assignedTo: "TM-1" },
+          { id: "T6", title: "به‌روزرسانی پیش‌بینی فصل دوم در قیف فروش", due: daysAgo(1), priority: "medium", done: true, assignedTo: "TM-2" },
+          { id: "T7", title: "هماهنگی دمو با هوش‌پرداز", due: daysAgo(-5), priority: "low", done: false, assignedTo: "TM-1", customerId: customers[3]!.id, companyId: customers[3]!.companyId },
         ]
       : [
-          { id: "T1", title: "Follow up with Lumina Labs on renewal", due: daysAgo(-1), priority: "high", done: false, assignee: "Arya Pams" },
-          { id: "T2", title: "Prepare proposal for Apex Digital", due: daysAgo(-2), priority: "high", done: false, assignee: "Liam Carter" },
-          { id: "T3", title: "Review churn-risk accounts", due: daysAgo(0), priority: "medium", done: false, assignee: "Arya Pams" },
-          { id: "T4", title: "Send onboarding deck to Drift Studio", due: daysAgo(-3), priority: "medium", done: false, assignee: "Ava Garcia" },
-          { id: "T5", title: "Reply to 3 new customer reviews", due: daysAgo(0), priority: "low", done: false, assignee: "Arya Pams" },
-          { id: "T6", title: "Update Q2 forecast in pipeline", due: daysAgo(1), priority: "medium", done: true, assignee: "Noah Patel" },
-          { id: "T7", title: "Schedule demo with Vertex AI", due: daysAgo(-5), priority: "low", done: false, assignee: "Arya Pams" },
+          { id: "T1", title: "Follow up with Lumina Labs on renewal", due: daysAgo(-1), priority: "high", done: false, assignedTo: "TM-1", customerId: customers[0]!.id, companyId: customers[0]!.companyId },
+          { id: "T2", title: "Prepare proposal for Apex Digital", due: daysAgo(-2), priority: "high", done: false, assignedTo: "TM-4", customerId: customers[1]!.id, companyId: customers[1]!.companyId, dealId: deals[0]?.id },
+          { id: "T3", title: "Review churn-risk accounts", due: daysAgo(0), priority: "medium", done: false, assignedTo: "TM-1" },
+          { id: "T4", title: "Send onboarding deck to Drift Studio", due: daysAgo(-3), priority: "medium", done: false, assignedTo: "TM-3", customerId: customers[2]!.id, companyId: customers[2]!.companyId },
+          { id: "T5", title: "Reply to 3 new customer reviews", due: daysAgo(0), priority: "low", done: false, assignedTo: "TM-1" },
+          { id: "T6", title: "Update Q2 forecast in pipeline", due: daysAgo(1), priority: "medium", done: true, assignedTo: "TM-2" },
+          { id: "T7", title: "Schedule demo with Vertex AI", due: daysAgo(-5), priority: "low", done: false, assignedTo: "TM-1", customerId: customers[3]!.id, companyId: customers[3]!.companyId },
         ];
 
   const notifications: Notification[] =
@@ -866,8 +915,56 @@ export function createSeedData(locale: Locale): AppData {
 
   const support = createSupportSeed(locale, customers, currentUser.name);
 
-  return {
+  const notes: Note[] =
+    locale === "fa"
+      ? [
+          {
+            id: "NT-1",
+            customerId: customers[0]!.id,
+            companyId: customers[0]!.companyId,
+            authorId: currentUser.id,
+            body: "تمدید سالانه را در اولویت بگذاریم. تصمیم‌گیرنده مالی همان تماس هفتهٔ پیش است.",
+            createdAt: hoursAgo(6),
+          },
+          {
+            id: "NT-2",
+            customerId: customers[0]!.id,
+            companyId: customers[0]!.companyId,
+            authorId: "TM-5",
+            body: "در جلسهٔ راه‌اندازی به یکپارچه‌سازی SSO اشاره کردند.",
+            createdAt: daysAgo(2),
+          },
+        ]
+      : [
+          {
+            id: "NT-1",
+            customerId: customers[0]!.id,
+            companyId: customers[0]!.companyId,
+            authorId: currentUser.id,
+            body: "Prioritize the annual renewal. Finance decision-maker is the same contact from last week's call.",
+            createdAt: hoursAgo(6),
+          },
+          {
+            id: "NT-2",
+            customerId: customers[0]!.id,
+            companyId: customers[0]!.companyId,
+            authorId: "TM-5",
+            body: "They mentioned SSO integration during onboarding.",
+            createdAt: daysAgo(2),
+          },
+        ];
+
+  const timeline = buildSeedTimeline({
+    deals,
+    conversations: support.conversations,
+    tickets: support.tickets,
+    tasks,
+    notes,
+  });
+
+  const bundle = recountStats({
     currentUser,
+    teamMembers,
     AVATARS,
     avatarColor,
     kpis,
@@ -880,6 +977,8 @@ export function createSeedData(locale: Locale): AppData {
     reviews,
     activities,
     tasks,
+    notes,
+    timeline,
     notifications,
     messages,
     conversations: support.conversations,
@@ -894,7 +993,9 @@ export function createSeedData(locale: Locale): AppData {
     CUST_STATUS: CUST_STATUSES,
     INDUSTRIES,
     MONTHS: months,
-  };
+  });
+
+  return bundle;
 }
 
 export { AVATARS };

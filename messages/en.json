@@ -19,6 +19,7 @@
     "settings": "Settings",
     "help": "Help & Support",
     "primary": "Primary",
+    "workspace": "Workspace",
     "designSystem": "Design system"
   },
   "shell": {
@@ -449,7 +450,32 @@
     "addNote": "Add note",
     "noteAdded": "Note added",
     "message": "Message",
-    "messageTo": "Message {name}"
+    "messageTo": "Message {name}",
+    "conversations": "Conversations",
+    "tickets": "Tickets",
+    "noConversations": "No conversations",
+    "noConversationsDesc": "Nothing in the inbox for this customer yet.",
+    "noTickets": "No tickets",
+    "noTicketsDesc": "No support tickets linked to this customer.",
+    "noActivity": "No activity yet",
+    "noActivityDesc": "Events will appear here as you work this account.",
+    "dealCreated": "Deal created",
+    "selectCompany": "Select company",
+    "noCompany": "No company",
+    "openTasks": "Open tasks",
+    "recentConversations": "Recent conversations",
+    "newDealTitle": "New deal — {name}",
+    "timeline": {
+      "conversation_created": "Conversation started · {title}",
+      "message_received": "Message received · {title}",
+      "ticket_created": "Ticket created · {title}",
+      "deal_created": "Deal created · {title}",
+      "deal_stage_changed": "Deal moved to {stage} · {title}",
+      "task_created": "Task created · {title}",
+      "note_added": "Note added",
+      "customer_created": "Customer created",
+      "customer_updated": "Customer details updated"
+    }
   },
   "reviews": {
     "title": "Customer Reviews",
@@ -741,6 +767,7 @@
     "mins": "{n} min",
     "supportTab": "Support",
     "crmTab": "CRM"
+  },
   "designSystem": {
     "title": "Design system",
     "sub": "Color, type, components, and Lucide icons that make up Kerso.",

@@ -21,13 +21,20 @@ import { localizedPath } from "@/lib/i18n/navigation";
 import { dealStageLabel, dealStatusLabel } from "@/lib/data/labels";
 import { store } from "@/lib/utils/store";
 import { getAppNow } from "@/lib/utils/time";
-import type { Deal, DealStage } from "@/types";
+import type { DealStage } from "@/types";
 import { AreaLineChart } from "@/components/charts/AreaLineChart";
 import { BarChart } from "@/components/charts/BarChart";
 import { ChartLegend } from "@/components/charts/ChartLegend";
 import { CHART } from "@/components/charts/palette";
 import { DataTable } from "@/components/ui/DataTable";
 import { DetailRow } from "@/components/ui/DetailRow";
+import { useRecordQuery } from "@/hooks/useRecordQuery";
+import {
+  companyName,
+  teamMemberAvatar,
+  teamMemberById,
+  teamMemberName,
+} from "@/lib/data/relations";
 
 type Widgets = {
   revenue: boolean;
@@ -55,7 +62,11 @@ const ACT_ICON = {
   message: "message",
 } as const;
 
-export function DashboardPage() {
+export function DashboardPage({
+  initialDealId = null,
+}: {
+  initialDealId?: string | null;
+}) {
   const { locale, dict, t, fmt } = useI18n();
   const { data, toggleTask, addTask, updateDeal } = useData();
   const { toast } = useToast();
@@ -67,7 +78,7 @@ export function DashboardPage() {
   );
   const [manageOpen, setManageOpen] = useState(false);
   const [draftWidgets, setDraftWidgets] = useState<Widgets>(widgets);
-  const [deal, setDeal] = useState<Deal | null>(null);
+  const [dealId, setDealId] = useRecordQuery("deal", initialDealId);
   const [taskTitle, setTaskTitle] = useState("");
 
   const thisYear = t("charts.thisYear");
@@ -117,6 +128,10 @@ export function DashboardPage() {
   const recentDeals = [...data.deals]
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
+  const deal = data.deals.find((d) => d.id === dealId) ?? null;
+  const dealOwner = deal
+    ? teamMemberById(data.teamMembers, deal.ownerId)
+    : undefined;
 
   const widgetLabels: Record<keyof Widgets, string> = {
     revenue: dict.dashboard.revenueOverview,
@@ -273,7 +288,7 @@ export function DashboardPage() {
               <DataTable
                 paginate={false}
                 rows={recentDeals}
-                rowClick={(d) => setDeal(d)}
+                rowClick={(d) => setDealId(d.id)}
                 columns={[
                   {
                     key: "title",
@@ -285,14 +300,22 @@ export function DashboardPage() {
                       </>
                     ),
                   },
-                  { key: "company", label: dict.dashboard.company },
+                  {
+                    key: "company",
+                    label: dict.dashboard.company,
+                    render: (d) => companyName(data.companies, d.companyId),
+                  },
                   {
                     key: "owner",
                     label: dict.dashboard.owner,
                     render: (d) => (
                       <span className="cell-user">
-                        <Avatar name={d.owner} color={d.ownerColor} size={26} />
-                        <span>{d.owner}</span>
+                        <Avatar
+                          name={teamMemberName(data.teamMembers, d.ownerId)}
+                          color={teamMemberAvatar(data.teamMembers, d.ownerId)}
+                          size={26}
+                        />
+                        <span>{teamMemberName(data.teamMembers, d.ownerId)}</span>
                       </span>
                     ),
                   },
@@ -441,7 +464,11 @@ export function DashboardPage() {
                           </span>
                         </div>
                       </div>
-                      <Avatar name={task.assignee} color="indigo" size={26} />
+                      <Avatar
+                        name={teamMemberName(data.teamMembers, task.assignedTo)}
+                        color={teamMemberAvatar(data.teamMembers, task.assignedTo)}
+                        size={26}
+                      />
                     </li>
                   );
                 })}
@@ -457,7 +484,7 @@ export function DashboardPage() {
                     due: getAppNow(),
                     priority: "medium",
                     done: false,
-                    assignee: data.currentUser.name,
+                    assignedTo: data.currentUser.id,
                   });
                   setTaskTitle("");
                   toast(dict.dashboard.taskAdded, { type: "success" });
@@ -524,7 +551,7 @@ export function DashboardPage() {
 
       <Drawer
         open={!!deal}
-        onClose={() => setDeal(null)}
+        onClose={() => setDealId(null)}
         width={460}
         head={
           deal ? (
@@ -532,7 +559,7 @@ export function DashboardPage() {
               <div className="drawer-id__main">
                 <h2 className="drawer__title">{deal.title}</h2>
                 <p className="drawer-id__sub">
-                  {deal.company} · {deal.id}
+                  {companyName(data.companies, deal.companyId)} · {deal.id}
                 </p>
               </div>
               <Badge statusKey={deal.stage}>
@@ -555,7 +582,7 @@ export function DashboardPage() {
                 icon="check-circle"
                 onClick={() => {
                   updateDeal(deal.id, { status: "won", stage: "won", probability: 100 });
-                  setDeal(null);
+                  setDealId(null);
                   toast(dict.dashboard.dealWonToast, {
                     type: "success",
                     desc: deal.title,
@@ -577,8 +604,12 @@ export function DashboardPage() {
             <div className="detail-grid">
               <DetailRow label={dict.dashboard.owner}>
                 <span className="cell-user">
-                  <Avatar name={deal.owner} color={deal.ownerColor} size={24} />
-                  {deal.owner}
+                  <Avatar
+                    name={dealOwner?.name ?? "—"}
+                    color={teamMemberAvatar(data.teamMembers, deal.ownerId)}
+                    size={24}
+                  />
+                  {dealOwner?.name ?? "—"}
                 </span>
               </DetailRow>
               <DetailRow label={dict.dashboard.stage}>

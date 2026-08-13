@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { PageHead } from "@/components/ui/PageHead";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -18,6 +19,7 @@ import { Icon } from "@/lib/icons";
 import { useData } from "@/hooks/useData";
 import { useI18n } from "@/hooks/useI18n";
 import { useToast } from "@/hooks/useToast";
+import { localizedPath } from "@/lib/i18n/navigation";
 import {
   COMPANY_STATUSES,
   companySizeLabel,
@@ -33,6 +35,8 @@ import type {
   IndustryKey,
 } from "@/types";
 import { cn } from "@/lib/utils/cn";
+import { useRecordQuery } from "@/hooks/useRecordQuery";
+import { customersForCompany, dealsForCompany } from "@/lib/data/relations";
 
 type SortKey = "revenue" | "growth" | "deals" | "name";
 type ViewMode = "grid" | "list";
@@ -60,8 +64,13 @@ function CompanyLogo({
   );
 }
 
-export function ExplorePage() {
-  const { dict, t, fmt } = useI18n();
+export function ExplorePage({
+  initialCompanyId = null,
+}: {
+  initialCompanyId?: string | null;
+}) {
+  const { locale, dict, t, fmt } = useI18n();
+  const router = useRouter();
   const { data, addCompany, addDeal } = useData();
   const { toast } = useToast();
 
@@ -70,7 +79,7 @@ export function ExplorePage() {
   const [industry, setIndustry] = useState("all");
   const [status, setStatus] = useState("all");
   const [sort, setSort] = useState<SortKey>("revenue");
-  const [company, setCompany] = useState<Company | null>(null);
+  const [companyId, setCompanyId] = useRecordQuery("company", initialCompanyId);
   const [drawerTab, setDrawerTab] = useState("ov");
   const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState({
@@ -109,15 +118,12 @@ export function ExplorePage() {
     return list;
   }, [data.companies, q, industry, status, sort, dict]);
 
-  const related = company
-    ? data.customers.filter((x) => x.company === company.name)
-    : [];
-  const dealsFor = company
-    ? data.deals.filter((x) => x.company === company.name)
-    : [];
+  const company = data.companies.find((c) => c.id === companyId) ?? null;
+  const related = company ? customersForCompany(data.customers, company.id) : [];
+  const dealsFor = company ? dealsForCompany(data.deals, company.id) : [];
 
   const openCompany = (c: Company) => {
-    setCompany(c);
+    setCompanyId(c.id);
     setDrawerTab("ov");
   };
 
@@ -394,7 +400,7 @@ export function ExplorePage() {
 
       <Drawer
         open={!!company}
-        onClose={() => setCompany(null)}
+        onClose={() => setCompanyId(null)}
         width={480}
         head={
           company ? (
@@ -430,16 +436,16 @@ export function ExplorePage() {
                 onClick={() => {
                   addDeal({
                     title: `${company.name} deal`,
-                    company: company.name,
-                    owner: data.currentUser.name,
-                    ownerColor: "indigo",
+                    companyId: company.id,
+                    customerId: related[0]?.id,
+                    ownerId: data.currentUser.id,
                     value: 10000,
                     stage: "lead",
                     probability: 20,
                     close: new Date(),
                     status: "open",
                   });
-                  setCompany(null);
+                  setDrawerTab("dl");
                   toast(dict.explore.newDealStarted, {
                     type: "success",
                     desc: company.name,
@@ -515,15 +521,28 @@ export function ExplorePage() {
                 {related.length ? (
                   <ul className="mini-list">
                     {related.map((p) => (
-                      <li key={p.id} className="mini-list__item">
-                        <Avatar name={p.name} color={p.avatar} size={34} />
-                        <div className="mini-list__main">
-                          <div className="cell-strong">{p.name}</div>
-                          <div className="cell-sub">{p.email}</div>
-                        </div>
-                        <Badge statusKey={p.status}>
-                          {dict.common.status[p.status]}
-                        </Badge>
+                      <li key={p.id}>
+                        <button
+                          type="button"
+                          className="mini-list__item"
+                          onClick={() =>
+                            router.push(
+                              localizedPath(
+                                locale,
+                                `/customers?customer=${p.id}`,
+                              ),
+                            )
+                          }
+                        >
+                          <Avatar name={p.name} color={p.avatar} size={34} />
+                          <div className="mini-list__main">
+                            <div className="cell-strong">{p.name}</div>
+                            <div className="cell-sub">{p.email}</div>
+                          </div>
+                          <Badge statusKey={p.status}>
+                            {dict.common.status[p.status]}
+                          </Badge>
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -537,19 +556,29 @@ export function ExplorePage() {
                 {dealsFor.length ? (
                   <ul className="mini-list">
                     {dealsFor.map((d) => (
-                      <li key={d.id} className="mini-list__item">
-                        <span className="mini-list__icon">
-                          <Icon name="briefcase" size={16} />
-                        </span>
-                        <div className="mini-list__main">
-                          <div className="cell-strong">{d.title}</div>
-                          <div className="cell-sub">
-                            {fmt.money(d.value)} · {dealStageLabel(dict, d.stage)}
+                      <li key={d.id}>
+                        <button
+                          type="button"
+                          className="mini-list__item"
+                          onClick={() =>
+                            router.push(
+                              localizedPath(locale, `/dashboard?deal=${d.id}`),
+                            )
+                          }
+                        >
+                          <span className="mini-list__icon">
+                            <Icon name="briefcase" size={16} />
+                          </span>
+                          <div className="mini-list__main">
+                            <div className="cell-strong">{d.title}</div>
+                            <div className="cell-sub">
+                              {fmt.money(d.value)} · {dealStageLabel(dict, d.stage)}
+                            </div>
                           </div>
-                        </div>
-                        <Badge statusKey={d.status}>
-                          {dealStatusLabel(dict, d.status)}
-                        </Badge>
+                          <Badge statusKey={d.status}>
+                            {dealStatusLabel(dict, d.status)}
+                          </Badge>
+                        </button>
                       </li>
                     ))}
                   </ul>

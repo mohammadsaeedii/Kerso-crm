@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CustomersPage } from "@/features/customers/CustomersPage";
+import { firstQuery } from "@/lib/utils/query";
 import { isLocale, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 
@@ -14,6 +15,11 @@ export async function generateMetadata({
   return { title: dict.customers.title };
 }
 
-export default function Page() {
-  return <CustomersPage />;
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ customer?: string }>;
+}) {
+  const sp = await searchParams;
+  return <CustomersPage initialCustomerId={firstQuery(sp.customer)} />;
 }

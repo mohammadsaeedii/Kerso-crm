@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
+import { firstQuery } from "@/lib/utils/query";
 import { isLocale, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 
@@ -14,6 +15,11 @@ export async function generateMetadata({
   return { title: dict.dashboard.title };
 }
 
-export default function Page() {
-  return <DashboardPage />;
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ deal?: string }>;
+}) {
+  const sp = await searchParams;
+  return <DashboardPage initialDealId={firstQuery(sp.deal)} />;
 }
