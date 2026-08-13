@@ -12,6 +12,7 @@ import { localizedPath } from "@/lib/i18n/navigation";
 import { CommandSearch } from "./CommandSearch";
 import { LanguageSwitcher } from "@/components/navigation/LanguageSwitcher";
 import { FaceAvatar, Avatar } from "@/components/ui/Avatar";
+import { IconButton } from "@/components/ui/IconButton";
 import { cn } from "@/lib/utils/cn";
 
 export type TopbarProps = {
@@ -79,51 +80,47 @@ export function Topbar({ onOpenNav }: TopbarProps) {
 
   return (
     <header className="topbar">
-      <button
-        type="button"
-        className="hamburger icon-btn"
-        aria-label={t("shell.openMenu")}
+      <IconButton
+        className="hamburger"
+        icon="list"
+        size={22}
+        tip={t("shell.openMenu")}
         onClick={onOpenNav}
-      >
-        <Icon name="list" size={22} />
-      </button>
+      />
 
       <CommandSearch />
 
       <div className="topbar__actions">
         <LanguageSwitcher locale={locale} />
 
-        <button
+        <IconButton
           ref={notifRef}
-          type="button"
-          className={cn("icon-btn", unreadN > 0 && "icon-btn--badge")}
-          aria-label={t("shell.notifications")}
+          icon="bell"
+          size={22}
+          tip={t("shell.notifications")}
+          count={unreadN}
+          countLabel={fmt.digits(unreadN)}
+          countTone="coral"
           aria-expanded={panel === "notif"}
           onClick={() => {
             place(notifRef.current);
             setPanel((p) => (p === "notif" ? null : "notif"));
           }}
-        >
-          <Icon name="bell" size={22} />
-          {unreadN > 0 ? (
-            <span className="badge badge--coral">{fmt.digits(unreadN)}</span>
-          ) : null}
-        </button>
+        />
 
-        <button
+        <IconButton
           ref={msgRef}
-          type="button"
-          className={cn("icon-btn", unreadM > 0 && "icon-btn--badge")}
-          aria-label={t("shell.messages")}
+          icon="message"
+          size={22}
+          tip={t("shell.messages")}
+          count={unreadM}
+          countLabel={fmt.digits(unreadM)}
           aria-expanded={panel === "msg"}
           onClick={() => {
             place(msgRef.current);
             setPanel((p) => (p === "msg" ? null : "msg"));
           }}
-        >
-          <Icon name="message" size={22} />
-          {unreadM > 0 ? <span className="badge">{fmt.digits(unreadM)}</span> : null}
-        </button>
+        />
 
         <span className="topbar__divider" aria-hidden="true" />
 

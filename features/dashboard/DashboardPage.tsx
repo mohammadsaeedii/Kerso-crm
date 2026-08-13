@@ -25,7 +25,9 @@ import type { Deal, DealStage } from "@/types";
 import { AreaLineChart } from "@/components/charts/AreaLineChart";
 import { BarChart } from "@/components/charts/BarChart";
 import { ChartLegend } from "@/components/charts/ChartLegend";
-// charts barrel also available via @/components/charts
+import { CHART } from "@/components/charts/palette";
+import { DataTable } from "@/components/ui/DataTable";
+import { DetailRow } from "@/components/ui/DetailRow";
 
 type Widgets = {
   revenue: boolean;
@@ -96,12 +98,12 @@ export function DashboardPage() {
     }
     const series = [];
     if (!hidden.has(thisYear)) {
-      series.push({ name: thisYear, color: "#4F46E5", values: cur });
+      series.push({ name: thisYear, color: CHART.primary, values: cur });
     }
     if (!hidden.has(lastYear)) {
       series.push({
         name: lastYear,
-        color: "#CBD2E0",
+        color: CHART.muted,
         values: prev,
         fill: false,
         dashed: true,
@@ -180,25 +182,14 @@ export function DashboardPage() {
               title={dict.dashboard.revenueOverview}
               sub={dict.dashboard.revenueSub}
               actions={
-                <div className="legend legend--toggle">
-                  {[
-                    { name: thisYear, color: "#4F46E5" },
-                    { name: lastYear, color: "#CBD2E0" },
-                  ].map((it) => (
-                    <button
-                      key={it.name}
-                      type="button"
-                      className={`legend__item${hidden.has(it.name) ? " is-off" : ""}`}
-                      onClick={() => toggleLegend(it.name)}
-                    >
-                      <span
-                        className="legend__dot"
-                        style={{ background: it.color }}
-                      />
-                      {it.name}
-                    </button>
-                  ))}
-                </div>
+                <ChartLegend
+                  items={[
+                    { name: thisYear, color: CHART.primary },
+                    { name: lastYear, color: CHART.muted },
+                  ]}
+                  hidden={hidden}
+                  onToggle={toggleLegend}
+                />
               }
             >
               <AreaLineChart
@@ -279,57 +270,68 @@ export function DashboardPage() {
                 </Link>
               }
             >
-              <div className="table-wrap">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>{dict.dashboard.deal}</th>
-                      <th>{dict.dashboard.company}</th>
-                      <th>{dict.dashboard.owner}</th>
-                      <th className="ta-right">{dict.dashboard.value}</th>
-                      <th>{dict.dashboard.stage}</th>
-                      <th>{dict.dashboard.probability}</th>
-                      <th>{dict.dashboard.closeDate}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentDeals.map((d) => (
-                      <tr
-                        key={d.id}
-                        className="is-clickable"
-                        onClick={() => setDeal(d)}
-                      >
-                        <td>
-                          <div className="cell-strong">{d.title}</div>
-                          <div className="cell-sub">{d.id}</div>
-                        </td>
-                        <td>{d.company}</td>
-                        <td>
-                          <span className="cell-user">
-                            <Avatar name={d.owner} color={d.ownerColor} size={26} />
-                            <span>{d.owner}</span>
-                          </span>
-                        </td>
-                        <td className="ta-right">
-                          <b>{fmt.money(d.value)}</b>
-                        </td>
-                        <td>
-                          <Badge statusKey={d.stage}>
-                            {dealStageLabel(dict, d.stage)}
-                          </Badge>
-                        </td>
-                        <td>
-                          <div className="cell-prob">
-                            <Progress value={d.probability} small />
-                            <span>{fmt.digits(d.probability)}%</span>
-                          </div>
-                        </td>
-                        <td style={{ whiteSpace: "nowrap" }}>{fmt.date(d.close)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                paginate={false}
+                rows={recentDeals}
+                rowClick={(d) => setDeal(d)}
+                columns={[
+                  {
+                    key: "title",
+                    label: dict.dashboard.deal,
+                    render: (d) => (
+                      <>
+                        <div className="cell-strong">{d.title}</div>
+                        <div className="cell-sub">{d.id}</div>
+                      </>
+                    ),
+                  },
+                  { key: "company", label: dict.dashboard.company },
+                  {
+                    key: "owner",
+                    label: dict.dashboard.owner,
+                    render: (d) => (
+                      <span className="cell-user">
+                        <Avatar name={d.owner} color={d.ownerColor} size={26} />
+                        <span>{d.owner}</span>
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "value",
+                    label: dict.dashboard.value,
+                    align: "right",
+                    sortVal: (d) => d.value,
+                    render: (d) => <b>{fmt.money(d.value)}</b>,
+                  },
+                  {
+                    key: "stage",
+                    label: dict.dashboard.stage,
+                    render: (d) => (
+                      <Badge statusKey={d.stage}>
+                        {dealStageLabel(dict, d.stage)}
+                      </Badge>
+                    ),
+                  },
+                  {
+                    key: "probability",
+                    label: dict.dashboard.probability,
+                    sortVal: (d) => d.probability,
+                    render: (d) => (
+                      <div className="cell-prob">
+                        <Progress value={d.probability} small />
+                        <span>{fmt.digits(d.probability)}%</span>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: "close",
+                    label: dict.dashboard.closeDate,
+                    nowrap: true,
+                    sortVal: (d) => +d.close,
+                    render: (d) => fmt.date(d.close),
+                  },
+                ]}
+              />
             </Panel>
           </div>
         ) : null}
@@ -376,8 +378,8 @@ export function DashboardPage() {
               legend={
                 <ChartLegend
                   items={[
-                    { name: t("charts.won"), color: "#4F46E5" },
-                    { name: t("charts.lost"), color: "#E2E6EE" },
+                    { name: t("charts.won"), color: CHART.primary },
+                    { name: t("charts.lost"), color: CHART.track },
                   ]}
                 />
               }
@@ -387,12 +389,12 @@ export function DashboardPage() {
                 series={[
                   {
                     name: t("charts.won"),
-                    color: "#4F46E5",
+                    color: CHART.primary,
                     values: data.dealsCreated.map((d) => d.won),
                   },
                   {
                     name: t("charts.lost"),
-                    color: "#E2E6EE",
+                    color: CHART.track,
                     values: data.dealsCreated.map((d) => d.lost),
                   },
                 ]}
@@ -573,29 +575,29 @@ export function DashboardPage() {
               <span>{dict.dashboard.dealValue}</span>
             </div>
             <div className="detail-grid">
-              <Detail label={dict.dashboard.owner}>
+              <DetailRow label={dict.dashboard.owner}>
                 <span className="cell-user">
                   <Avatar name={deal.owner} color={deal.ownerColor} size={24} />
                   {deal.owner}
                 </span>
-              </Detail>
-              <Detail label={dict.dashboard.stage}>
+              </DetailRow>
+              <DetailRow label={dict.dashboard.stage}>
                 <Badge statusKey={deal.stage}>
                   {dealStageLabel(dict, deal.stage)}
                 </Badge>
-              </Detail>
-              <Detail label={dict.dashboard.probability}>
+              </DetailRow>
+              <DetailRow label={dict.dashboard.probability}>
                 <div className="cell-prob">
                   <Progress value={deal.probability} small />
                   <span>{fmt.digits(deal.probability)}%</span>
                 </div>
-              </Detail>
-              <Detail label={dict.dashboard.closeDate}>{fmt.date(deal.close)}</Detail>
-              <Detail label={dict.dashboard.status}>
+              </DetailRow>
+              <DetailRow label={dict.dashboard.closeDate}>{fmt.date(deal.close)}</DetailRow>
+              <DetailRow label={dict.dashboard.status}>
                 <Badge statusKey={deal.status}>
                   {dealStatusLabel(dict, deal.status)}
                 </Badge>
-              </Detail>
+              </DetailRow>
             </div>
             <h4 className="drawer-section">{dict.dashboard.stageProgress}</h4>
             <ol className="stage-track">
@@ -636,20 +638,5 @@ export function DashboardPage() {
         ) : null}
       </Drawer>
     </>
-  );
-}
-
-function Detail({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="detail-row">
-      <span className="detail-row__label">{label}</span>
-      <span className="detail-row__val">{children}</span>
-    </div>
   );
 }

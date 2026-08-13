@@ -1,9 +1,19 @@
-/** Default chart color palette (matches legacy App.charts.PALETTE). */
+/** Chart colors from the design-system tokens (theme-aware). */
+export const CHART = {
+  primary: "var(--indigo)",
+  muted: "var(--text-3)",
+  track: "var(--track)",
+  up: "var(--green)",
+  down: "var(--red)",
+  warn: "var(--amber)",
+  badge: "var(--badge)",
+} as const;
+
 export const CHART_PALETTE = [
-  "#4F46E5",
-  "#22C55E",
-  "#F59E0B",
-  "#06B6D4",
-  "#EC4899",
-  "#8B5CF6",
+  "var(--c-indigo)",
+  "var(--c-green)",
+  "var(--c-amber)",
+  "var(--c-sky)",
+  "var(--c-pink)",
+  "var(--c-violet)",
 ] as const;

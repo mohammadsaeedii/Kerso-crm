@@ -13,7 +13,7 @@ export type GaugeChartProps = {
 export function GaugeChart({
   value: raw,
   size = 160,
-  color = "#4F46E5",
+  color = "var(--indigo)",
   label,
   sub = "",
   className,

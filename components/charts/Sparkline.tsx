@@ -17,7 +17,7 @@ export function Sparkline({
   values,
   width = 120,
   height = 36,
-  color = "#4F46E5",
+  color = "var(--indigo)",
   cssWidth,
   className,
 }: SparklineProps) {

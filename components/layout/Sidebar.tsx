@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/useToast";
 import { Icon, type IconName } from "@/lib/icons";
 import { BrandMark } from "./BrandMark";
 import { NavLink } from "@/components/navigation/NavLink";
+import { Button } from "@/components/ui/Button";
 
 export type SidebarProps = {
   collapsed: boolean;
@@ -89,6 +90,13 @@ export function Sidebar({ collapsed, onToggleCollapse, onNavigate }: SidebarProp
       <div className="nav nav--foot">
         <NavLink
           locale={locale}
+          href="/design-system"
+          label={dict.nav.designSystem}
+          icon="palette"
+          onNavigate={onNavigate}
+        />
+        <NavLink
+          locale={locale}
           href="/settings"
           label={dict.nav.settings}
           icon="gear"
@@ -115,9 +123,10 @@ export function Sidebar({ collapsed, onToggleCollapse, onNavigate }: SidebarProp
         </span>
         <p className="sidebar__card-title">{t("shell.upgradeTitle")}</p>
         <p className="sidebar__card-desc">{t("shell.upgradeDesc")}</p>
-        <button
-          type="button"
-          className="btn btn--primary btn--sm btn--block"
+        <Button
+          variant="primary"
+          size="sm"
+          block
           onClick={() =>
             toast(t("shell.upgrade"), {
               type: "info",
@@ -126,7 +135,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onNavigate }: SidebarProp
           }
         >
           {t("shell.upgrade")}
-        </button>
+        </Button>
       </div>
     </aside>
   );

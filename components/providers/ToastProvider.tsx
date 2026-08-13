@@ -72,7 +72,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <Icon name={ICONS[t.type]} size={18} />
             </span>
             <div className="toast__body">
-              <p className="toast__title">{t.title}</p>
+              <p className="toast__msg">{t.title}</p>
               {t.desc ? <p className="toast__desc">{t.desc}</p> : null}
             </div>
             <button

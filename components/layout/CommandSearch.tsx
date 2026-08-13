@@ -36,6 +36,7 @@ const PAGES: { id: string; icon: IconName; labelKey: string }[] = [
   { id: "explore", icon: "explore", labelKey: "nav.explore" },
   { id: "reviews", icon: "reviews", labelKey: "nav.reviews" },
   { id: "settings", icon: "gear", labelKey: "nav.settings" },
+  { id: "design-system", icon: "palette", labelKey: "nav.designSystem" },
 ];
 
 export function CommandSearch() {

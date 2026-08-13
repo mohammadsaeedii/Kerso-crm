@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useI18n } from "@/hooks/useI18n";
 import type { Kpi } from "@/types";
 import { Sparkline } from "@/components/charts/Sparkline";
+import { CHART } from "@/components/charts/palette";
 import { IconButton } from "@/components/ui/IconButton";
 import { TrendPill } from "@/components/ui/TrendPill";
 import { cn } from "@/lib/utils/cn";
@@ -54,7 +55,7 @@ export function KpiCard({
             values={kpi.spark}
             width={96}
             height={34}
-            color={kpi.dir === "up" ? "#22C55E" : "#F2654E"}
+            color={kpi.dir === "up" ? CHART.up : CHART.down}
           />
         </div>
       </div>

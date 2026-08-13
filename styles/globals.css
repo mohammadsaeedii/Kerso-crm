@@ -1,3 +1,5 @@
+@import "./design-system.css";
+
 /* ============================================================
    Kerso CRM — Design system & components (Next.js)
    Ported from legacy/styles.css with logical properties for
@@ -150,6 +152,9 @@ button { font-family: inherit; }
 .btn--danger:hover { background: color-mix(in srgb, var(--c-red) 10%, var(--surface)); }
 .btn--primary.btn--danger { background: var(--c-red); color:#fff; border-color: transparent; }
 .btn--primary.btn--danger:hover { background: color-mix(in srgb, var(--c-red) 88%, #000); }
+.btn:disabled, .icon-btn:disabled {
+  opacity: .5; cursor: not-allowed; box-shadow: none; pointer-events: none;
+}
 
 .icon-btn {
   position: relative; display: inline-flex; align-items: center; justify-content: center;

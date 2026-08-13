@@ -3,9 +3,7 @@
 import {
   useMemo,
   useState,
-  type CSSProperties,
   type FormEvent,
-  type ReactNode,
 } from "react";
 import { PageHead } from "@/components/ui/PageHead";
 import { Button } from "@/components/ui/Button";
@@ -19,6 +17,9 @@ import { Progress } from "@/components/ui/Progress";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Segmented } from "@/components/ui/Segmented";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { DataTable } from "@/components/ui/DataTable";
+import { DetailRow } from "@/components/ui/DetailRow";
+import { Menu, MenuItem } from "@/components/ui/Menu";
 import { GaugeChart } from "@/components/charts/GaugeChart";
 import { Icon, type IconName } from "@/lib/icons";
 import { useData } from "@/hooks/useData";
@@ -36,17 +37,6 @@ import { getAppNow } from "@/lib/utils/time";
 import type { Customer, CustomerStatus } from "@/types";
 import { cn } from "@/lib/utils/cn";
 
-type SortKey =
-  | "name"
-  | "company"
-  | "status"
-  | "city"
-  | "value"
-  | "health"
-  | "lastContact";
-
-type SortDir = "asc" | "desc";
-
 type Note = { body: string; time: Date };
 
 const ACT_ICON = {
@@ -56,67 +46,6 @@ const ACT_ICON = {
   task: "check",
   message: "message",
 } as const;
-
-function Detail({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="detail-row">
-      <span className="detail-row__label">{label}</span>
-      <span className="detail-row__val">{children}</span>
-    </div>
-  );
-}
-
-function SortTh({
-  label,
-  col,
-  sortKey,
-  sortDir,
-  onSort,
-  align,
-}: {
-  label: string;
-  col: SortKey;
-  sortKey: SortKey;
-  sortDir: SortDir;
-  onSort: (k: SortKey) => void;
-  align?: "right";
-}) {
-  const active = sortKey === col;
-  return (
-    <th className={cn(align === "right" && "ta-right")}>
-      <button
-        type="button"
-        className="th-sort"
-        onClick={() => onSort(col)}
-        style={{
-          background: "none",
-          border: "none",
-          padding: 0,
-          font: "inherit",
-          color: "inherit",
-          cursor: "pointer",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 4,
-        }}
-      >
-        {label}
-        {active ? (
-          <Icon
-            name={sortDir === "asc" ? "chevron-up" : "chevron-down"}
-            size={14}
-          />
-        ) : null}
-      </button>
-    </th>
-  );
-}
 
 export function CustomersPage() {
   const { locale, dict, t, fmt } = useI18n();
@@ -132,9 +61,6 @@ export function CustomersPage() {
 
   const [status, setStatus] = useState("all");
   const [q, setQ] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("value");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [drawerTab, setDrawerTab] = useState("ov");
   const [notes, setNotes] = useState<Note[]>([]);
@@ -155,8 +81,12 @@ export function CustomersPage() {
     email?: string;
   }>({});
   const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
+  const [bulkIds, setBulkIds] = useState<string[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-  const [menuId, setMenuId] = useState<string | null>(null);
+  const [menu, setMenu] = useState<{
+    row: Customer;
+    anchor: HTMLElement;
+  } | null>(null);
 
   const counts = useMemo(() => {
     const by = (s: CustomerStatus) =>
@@ -204,43 +134,15 @@ export function CustomersPage() {
           c.city.toLowerCase().includes(needle),
       );
     }
-    list.sort((a, b) => {
-      let cmp = 0;
-      if (sortKey === "name") cmp = a.name.localeCompare(b.name);
-      else if (sortKey === "company") cmp = a.company.localeCompare(b.company);
-      else if (sortKey === "status") cmp = a.status.localeCompare(b.status);
-      else if (sortKey === "city") cmp = a.city.localeCompare(b.city);
-      else if (sortKey === "value") cmp = a.value - b.value;
-      else if (sortKey === "health") cmp = a.health - b.health;
-      else cmp = +a.lastContact - +b.lastContact;
-      return sortDir === "asc" ? cmp : -cmp;
-    });
     return list;
-  }, [data.customers, status, q, sortKey, sortDir]);
-
-  const allSelected =
-    filtered.length > 0 && filtered.every((c) => selected.has(c.id));
-
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir(key === "name" || key === "company" || key === "city" ? "asc" : "desc");
-    }
-  };
-
-  const setStatusFilter = (s: string) => {
-    setStatus(s);
-    setSelected(new Set());
-  };
+  }, [data.customers, status, q]);
 
   const openDrawer = (c: Customer) => {
     setCustomer(c);
     setDrawerTab("ov");
     setNotes([]);
     setNoteText("");
-    setMenuId(null);
+    setMenu(null);
   };
 
   const openForm = (existing: Customer | null) => {
@@ -268,7 +170,7 @@ export function CustomersPage() {
     );
     setFormErrors({});
     setFormOpen(true);
-    setMenuId(null);
+    setMenu(null);
   };
 
   const submitForm = (e?: FormEvent) => {
@@ -378,7 +280,7 @@ export function CustomersPage() {
               "card stat-mini stat-mini--btn",
               status === c.key && "is-active",
             )}
-            onClick={() => setStatusFilter(c.key)}
+            onClick={() => setStatus(c.key)}
           >
             <span className="stat-mini__icon">
               <Icon name={c.icon} size={18} />
@@ -404,7 +306,7 @@ export function CustomersPage() {
         <div className="filterbar__controls">
           <Segmented
             value={status}
-            onChange={setStatusFilter}
+            onChange={setStatus}
             options={[
               { value: "all", label: dict.common.all },
               { value: "active", label: dict.common.status.active },
@@ -416,287 +318,160 @@ export function CustomersPage() {
         </div>
       </div>
 
-      {selected.size > 0 ? (
-        <div
-          className="bulk-bar"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            marginBottom: 14,
-            padding: "10px 14px",
-            borderRadius: 12,
-            border: "1px solid var(--border)",
-            background: "var(--surface)",
-          }}
-        >
-          <span style={{ fontSize: 13, fontWeight: 600 }}>
-            {t("common.table.selected", { count: fmt.digits(selected.size) })}
-          </span>
-          <Button
-            size="sm"
-            icon="mail"
-            onClick={() =>
-              toast(
-                t("customers.emailDrafted", {
-                  count: fmt.digits(selected.size),
-                }),
-                { type: "info" },
-              )
-            }
-          >
-            {dict.customers.email}
-          </Button>
-          <Button
-            size="sm"
-            icon="tag"
-            onClick={() =>
-              toast(
-                t("customers.tagged", { count: fmt.digits(selected.size) }),
-                { type: "success" },
-              )
-            }
-          >
-            {dict.customers.addTag}
-          </Button>
-          <Button
-            size="sm"
-            variant="danger"
-            icon="trash"
-            onClick={() => setBulkDeleteOpen(true)}
-          >
-            {t("common.delete")}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setSelected(new Set())}
-          >
-            {t("common.table.clear")}
-          </Button>
-        </div>
-      ) : null}
-
       <div className="panel panel--table">
-        {!filtered.length ? (
-          <EmptyState
-            icon="users"
-            title={dict.customers.noCustomers}
-            desc={dict.customers.noCustomersDesc}
-          />
-        ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th style={{ width: 40 }}>
-                    <label className="checkbox">
-                      <input
-                        type="checkbox"
-                        checked={allSelected}
-                        onChange={() => {
-                          if (allSelected) setSelected(new Set());
-                          else setSelected(new Set(filtered.map((c) => c.id)));
-                        }}
-                      />
-                      <span />
-                    </label>
-                  </th>
-                  <SortTh
-                    label={dict.customers.customer}
-                    col="name"
-                    sortKey={sortKey}
-                    sortDir={sortDir}
-                    onSort={toggleSort}
-                  />
-                  <SortTh
-                    label={dict.customers.company}
-                    col="company"
-                    sortKey={sortKey}
-                    sortDir={sortDir}
-                    onSort={toggleSort}
-                  />
-                  <SortTh
-                    label={dict.customers.status}
-                    col="status"
-                    sortKey={sortKey}
-                    sortDir={sortDir}
-                    onSort={toggleSort}
-                  />
-                  <SortTh
-                    label={dict.customers.location}
-                    col="city"
-                    sortKey={sortKey}
-                    sortDir={sortDir}
-                    onSort={toggleSort}
-                  />
-                  <SortTh
-                    label={dict.customers.value}
-                    col="value"
-                    sortKey={sortKey}
-                    sortDir={sortDir}
-                    onSort={toggleSort}
-                    align="right"
-                  />
-                  <SortTh
-                    label={dict.customers.health}
-                    col="health"
-                    sortKey={sortKey}
-                    sortDir={sortDir}
-                    onSort={toggleSort}
-                  />
-                  <SortTh
-                    label={dict.customers.lastContact}
-                    col="lastContact"
-                    sortKey={sortKey}
-                    sortDir={sortDir}
-                    onSort={toggleSort}
-                  />
-                  <th style={{ width: 44 }} />
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((c) => (
-                  <tr
-                    key={c.id}
-                    className="is-clickable"
-                    onClick={() => openDrawer(c)}
-                  >
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <label className="checkbox">
-                        <input
-                          type="checkbox"
-                          checked={selected.has(c.id)}
-                          onChange={() => {
-                            setSelected((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(c.id)) next.delete(c.id);
-                              else next.add(c.id);
-                              return next;
-                            });
-                          }}
-                        />
-                        <span />
-                      </label>
-                    </td>
-                    <td>
-                      <span className="cell-user">
-                        <Avatar name={c.name} color={c.avatar} size={36} />
-                        <span>
-                          <div className="cell-strong">{c.name}</div>
-                          <div className="cell-sub">{c.email}</div>
-                        </span>
-                      </span>
-                    </td>
-                    <td>{c.company}</td>
-                    <td>
-                      <Badge statusKey={c.status}>
-                        {customerStatusLabel(dict, c.status)}
-                      </Badge>
-                    </td>
-                    <td>
-                      <span className="cell-loc">
-                        <Icon name="map-pin" size={14} />
-                        {c.city}
-                      </span>
-                    </td>
-                    <td className="ta-right">
-                      <b>{fmt.money(c.value)}</b>
-                    </td>
-                    <td>
-                      <div className="cell-prob">
-                        <Progress value={c.health} small />
-                        <span>{fmt.digits(c.health)}</span>
-                      </div>
-                    </td>
-                    <td style={{ whiteSpace: "nowrap" }}>
-                      {fmt.relTime(c.lastContact)}
-                    </td>
-                    <td
-                      onClick={(e) => e.stopPropagation()}
-                      style={{ position: "relative" }}
-                    >
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        aria-label={t("common.rowActions")}
-                        onClick={() =>
-                          setMenuId((id) => (id === c.id ? null : c.id))
-                        }
-                      >
-                        <Icon name="more-h" size={16} />
-                      </button>
-                      {menuId === c.id ? (
-                        <div
-                          className="menu"
-                          style={{
-                            position: "absolute",
-                            insetInlineEnd: 0,
-                            top: "100%",
-                            zIndex: 20,
-                            minWidth: 160,
-                            background: "var(--surface)",
-                            border: "1px solid var(--border)",
-                            borderRadius: 10,
-                            boxShadow: "var(--shadow-hover)",
-                            padding: 6,
-                          }}
-                        >
-                          <button
-                            type="button"
-                            className="menu__item"
-                            style={menuItemStyle}
-                            onClick={() => openDrawer(c)}
-                          >
-                            <Icon name="eye" size={15} />
-                            {dict.customers.viewProfile}
-                          </button>
-                          <button
-                            type="button"
-                            className="menu__item"
-                            style={menuItemStyle}
-                            onClick={() => openForm(c)}
-                          >
-                            <Icon name="edit" size={15} />
-                            {t("common.edit")}
-                          </button>
-                          <button
-                            type="button"
-                            className="menu__item"
-                            style={menuItemStyle}
-                            onClick={() => {
-                              setMenuId(null);
-                              toast(
-                                t("customers.emailTo", { name: c.name }),
-                                { type: "info" },
-                              );
-                            }}
-                          >
-                            <Icon name="mail" size={15} />
-                            {dict.customers.sendEmail}
-                          </button>
-                          <button
-                            type="button"
-                            className="menu__item"
-                            style={{ ...menuItemStyle, color: "var(--c-red)" }}
-                            onClick={() => {
-                              setMenuId(null);
-                              setDeleteTarget(c);
-                            }}
-                          >
-                            <Icon name="trash" size={15} />
-                            {t("common.delete")}
-                          </button>
-                        </div>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <DataTable
+          rows={filtered}
+          selectable
+          sortKey="value"
+          sortDir="desc"
+          emptyIcon="users"
+          emptyTitle={dict.customers.noCustomers}
+          emptyDesc={dict.customers.noCustomersDesc}
+          rowClick={(c) => openDrawer(c)}
+          rowActions={(c, anchor) => setMenu({ row: c, anchor })}
+          bulkActions={[
+            {
+              label: dict.customers.email,
+              icon: "mail",
+              onClick: (rows) =>
+                toast(
+                  t("customers.emailDrafted", {
+                    count: fmt.digits(rows.length),
+                  }),
+                  { type: "info" },
+                ),
+            },
+            {
+              label: dict.customers.addTag,
+              icon: "tag",
+              onClick: (rows) =>
+                toast(
+                  t("customers.tagged", { count: fmt.digits(rows.length) }),
+                  { type: "success" },
+                ),
+            },
+            {
+              label: t("common.delete"),
+              icon: "trash",
+              variant: "danger",
+              onClick: (rows) => {
+                setBulkIds(rows.map((r) => r.id));
+                setBulkDeleteOpen(true);
+              },
+            },
+          ]}
+          columns={[
+            {
+              key: "name",
+              label: dict.customers.customer,
+              render: (c) => (
+                <span className="cell-user">
+                  <Avatar name={c.name} color={c.avatar} size={36} />
+                  <span>
+                    <div className="cell-strong">{c.name}</div>
+                    <div className="cell-sub">{c.email}</div>
+                  </span>
+                </span>
+              ),
+            },
+            { key: "company", label: dict.customers.company },
+            {
+              key: "status",
+              label: dict.customers.status,
+              render: (c) => (
+                <Badge statusKey={c.status}>
+                  {customerStatusLabel(dict, c.status)}
+                </Badge>
+              ),
+            },
+            {
+              key: "city",
+              label: dict.customers.location,
+              render: (c) => (
+                <span className="cell-loc">
+                  <Icon name="map-pin" size={14} />
+                  {c.city}
+                </span>
+              ),
+            },
+            {
+              key: "value",
+              label: dict.customers.value,
+              align: "right",
+              sortVal: (c) => c.value,
+              render: (c) => <b>{fmt.money(c.value)}</b>,
+            },
+            {
+              key: "health",
+              label: dict.customers.health,
+              sortVal: (c) => c.health,
+              render: (c) => (
+                <div className="cell-prob">
+                  <Progress value={c.health} small />
+                  <span>{fmt.digits(c.health)}</span>
+                </div>
+              ),
+            },
+            {
+              key: "lastContact",
+              label: dict.customers.lastContact,
+              nowrap: true,
+              sortVal: (c) => +c.lastContact,
+              render: (c) => fmt.relTime(c.lastContact),
+            },
+          ]}
+        />
       </div>
+
+      <Menu
+        open={!!menu}
+        anchor={menu?.anchor ?? null}
+        onClose={() => setMenu(null)}
+      >
+        {menu ? (
+          <>
+            <MenuItem
+              icon="eye"
+              onClick={() => {
+                openDrawer(menu.row);
+                setMenu(null);
+              }}
+            >
+              {dict.customers.viewProfile}
+            </MenuItem>
+            <MenuItem
+              icon="edit"
+              onClick={() => {
+                openForm(menu.row);
+                setMenu(null);
+              }}
+            >
+              {t("common.edit")}
+            </MenuItem>
+            <MenuItem
+              icon="mail"
+              onClick={() => {
+                toast(t("customers.emailTo", { name: menu.row.name }), {
+                  type: "info",
+                });
+                setMenu(null);
+              }}
+            >
+              {dict.customers.sendEmail}
+            </MenuItem>
+            <MenuItem
+              icon="trash"
+              danger
+              onClick={() => {
+                setDeleteTarget(menu.row);
+                setMenu(null);
+              }}
+            >
+              {t("common.delete")}
+            </MenuItem>
+          </>
+        ) : null}
+      </Menu>
 
       <Drawer
         open={!!customer}
@@ -799,29 +574,29 @@ export function CustomersPage() {
               {drawerTab === "ov" ? (
                 <div className="tabpane">
                   <div className="detail-grid">
-                    <Detail label={dict.customers.email}>
+                    <DetailRow label={dict.customers.email}>
                       <a className="link" href={`mailto:${customer.email}`}>
                         {customer.email}
                       </a>
-                    </Detail>
-                    <Detail label={dict.customers.phone}>
+                    </DetailRow>
+                    <DetailRow label={dict.customers.phone}>
                       {customer.phone}
-                    </Detail>
-                    <Detail label={dict.customers.location}>
+                    </DetailRow>
+                    <DetailRow label={dict.customers.location}>
                       {customer.city}, {customer.country}
-                    </Detail>
-                    <Detail label={dict.customers.owner}>
+                    </DetailRow>
+                    <DetailRow label={dict.customers.owner}>
                       <span className="cell-user">
                         <Avatar name={customer.owner} color="indigo" size={22} />
                         {customer.owner}
                       </span>
-                    </Detail>
-                    <Detail label={dict.customers.lifetimeValue}>
+                    </DetailRow>
+                    <DetailRow label={dict.customers.lifetimeValue}>
                       <b>{fmt.money(customer.value)}</b>
-                    </Detail>
-                    <Detail label={dict.customers.customerSince}>
+                    </DetailRow>
+                    <DetailRow label={dict.customers.customerSince}>
                       {fmt.date(customer.joined)}
-                    </Detail>
+                    </DetailRow>
                   </div>
                   <h4 className="drawer-section">
                     {dict.customers.accountHealth}
@@ -1081,14 +856,14 @@ export function CustomersPage() {
         onClose={() => setBulkDeleteOpen(false)}
         danger
         title={t("customers.bulkDeleteTitle", {
-          count: fmt.digits(selected.size),
+          count: fmt.digits(bulkIds.length),
         })}
         message={dict.customers.bulkDeleteMessage}
         confirmText={t("common.deleteAll")}
         onConfirm={() => {
-          const ids = Array.from(selected);
+          const ids = bulkIds;
           removeCustomers(ids);
-          setSelected(new Set());
+          setBulkIds([]);
           toast(
             t("customers.customersDeleted", {
               count: fmt.digits(ids.length),
@@ -1100,19 +875,3 @@ export function CustomersPage() {
     </>
   );
 }
-
-const menuItemStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  width: "100%",
-  padding: "8px 10px",
-  border: "none",
-  background: "transparent",
-  borderRadius: 8,
-  cursor: "pointer",
-  fontSize: 13,
-  fontWeight: 500,
-  color: "var(--text)",
-  textAlign: "start",
-};

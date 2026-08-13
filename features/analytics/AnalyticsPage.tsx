@@ -13,6 +13,7 @@ import { FunnelChart } from "@/components/charts/FunnelChart";
 import { HBarChart } from "@/components/charts/HBarChart";
 import { Heatmap } from "@/components/charts/Heatmap";
 import { ChartLegend } from "@/components/charts/ChartLegend";
+import { CHART } from "@/components/charts/palette";
 import { useData } from "@/hooks/useData";
 import { useI18n } from "@/hooks/useI18n";
 import { useToast } from "@/hooks/useToast";
@@ -74,7 +75,7 @@ export function AnalyticsPage() {
               series={[
                 {
                   name: t("charts.visitors"),
-                  color: "#4F46E5",
+                  color: CHART.primary,
                   values: A.visitors.map((v) => v.value),
                 },
               ]}
@@ -96,7 +97,7 @@ export function AnalyticsPage() {
             <ChartLegend
               items={A.sources.map((s) => ({
                 name: `${s.name} · ${fmt.digits(s.value)}%`,
-                color: s.color || "#4F46E5",
+                color: s.color || CHART.primary,
               }))}
             />
           </Panel>
@@ -155,7 +156,7 @@ export function AnalyticsPage() {
             <ChartLegend
               items={A.devices.map((s) => ({
                 name: `${s.name} · ${fmt.digits(s.value)}%`,
-                color: s.color || "#4F46E5",
+                color: s.color || CHART.primary,
               }))}
             />
           </Panel>

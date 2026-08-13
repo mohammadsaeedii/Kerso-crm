@@ -19,7 +19,7 @@
     "settings": "Settings",
     "help": "Help & Support",
     "primary": "Primary",
-    "workspace": "Workspace"
+    "designSystem": "Design system"
   },
   "shell": {
     "searchPlaceholder": "Search conversations, customers…",
@@ -741,5 +741,100 @@
     "mins": "{n} min",
     "supportTab": "Support",
     "crmTab": "CRM"
+  "designSystem": {
+    "title": "Design system",
+    "sub": "Color, type, components, and Lucide icons that make up Kerso.",
+    "toc": "On this page",
+    "copied": "Copied to clipboard",
+    "copyToken": "Copy token",
+    "copyIcon": "Copy icon name",
+    "searchIcons": "Search icons…",
+    "iconCount": "{count} icons",
+    "noIcons": "No matching icons",
+    "lucideNote": "Lucide icons via the Icon wrapper. Default size 20px, stroke 1.7.",
+    "openModal": "Open modal",
+    "openDrawer": "Open drawer",
+    "openConfirm": "Open confirm",
+    "showToast": "Show toast",
+    "toastTitle": "Changes saved",
+    "toastDesc": "Your workspace is up to date.",
+    "modalTitle": "Create deal",
+    "modalSub": "A focused task in a dialog.",
+    "modalBody": "Use modals for short, blocking tasks with one primary action.",
+    "drawerTitle": "Record details",
+    "drawerBody": "Drawers keep context on the page. Use them for profiles and records.",
+    "confirmTitle": "Delete this record?",
+    "confirmMessage": "This cannot be undone. The record will be removed permanently.",
+    "sampleName": "Jane Cooper",
+    "sampleEmail": "jane@acme.com",
+    "principles": {
+      "colorTitle": "One accent",
+      "colorDesc": "Indigo for actions and focus. Green, amber, and red for status only.",
+      "typeTitle": "Clear type",
+      "typeDesc": "Inter for English, Vazirmatn for Persian. Tight headings, relaxed body.",
+      "spaceTitle": "8px grid",
+      "spaceDesc": "Spacing, radius, and touch targets stay on a consistent scale.",
+      "iconTitle": "Lucide icons",
+      "iconDesc": "Stroke icons at 1.7 weight. The same set in light and dark."
+    },
+    "sections": {
+      "color": "Color",
+      "typography": "Typography",
+      "tokens": "Space & elevation",
+      "buttons": "Buttons",
+      "icons": "Icons",
+      "forms": "Forms",
+      "components": "Components",
+      "overlays": "Overlays"
+    },
+    "color": {
+      "surfaces": "Surfaces",
+      "text": "Text",
+      "borders": "Borders & tracks",
+      "brand": "Brand & status",
+      "hues": "Hue palette"
+    },
+    "type": {
+      "pageTitle": "Page title",
+      "panelTitle": "Panel title",
+      "body": "Body / label",
+      "caption": "Caption",
+      "sample": "The quick brown fox jumps over the lazy dog."
+    },
+    "buttons": {
+      "variants": "Variants",
+      "sizes": "Sizes",
+      "withIcons": "With icons",
+      "states": "States",
+      "iconButtons": "Icon buttons",
+      "primary": "Primary",
+      "secondary": "Secondary",
+      "ghost": "Ghost",
+      "danger": "Danger",
+      "small": "Small",
+      "medium": "Medium",
+      "disabled": "Disabled"
+    },
+    "forms": {
+      "select": "Industry",
+      "area": "Notes",
+      "invalid": "Invalid email",
+      "toggles": "Toggles",
+      "enabled": "Email alerts"
+    },
+    "components": {
+      "badges": "Badges & tags",
+      "avatars": "Avatars",
+      "stars": "Ratings & trends",
+      "progress": "Progress",
+      "tabs": "Tabs",
+      "segmented": "Segmented",
+      "empty": "Empty state",
+      "kpi": "KPI card",
+      "table": "Table",
+      "all": "All",
+      "open": "Open",
+      "won": "Won"
+    }
   }
 }

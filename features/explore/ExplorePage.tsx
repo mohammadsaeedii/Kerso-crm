@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { PageHead } from "@/components/ui/PageHead";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -12,6 +12,8 @@ import { Tabs } from "@/components/ui/Tabs";
 import { Stars } from "@/components/ui/Stars";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Segmented } from "@/components/ui/Segmented";
+import { DataTable } from "@/components/ui/DataTable";
+import { DetailRow } from "@/components/ui/DetailRow";
 import { Icon } from "@/lib/icons";
 import { useData } from "@/hooks/useData";
 import { useI18n } from "@/hooks/useI18n";
@@ -55,21 +57,6 @@ function CompanyLogo({
     >
       {name.charAt(0)}
     </span>
-  );
-}
-
-function Detail({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="detail-row">
-      <span className="detail-row__label">{label}</span>
-      <span className="detail-row__val">{children}</span>
-    </div>
   );
 }
 
@@ -336,57 +323,72 @@ export function ExplorePage() {
       ) : view === "grid" ? (
         <div className="biz-grid">{filtered.map(companyCard)}</div>
       ) : (
-        <div className="panel" style={{ marginTop: 14 }}>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>{dict.explore.company}</th>
-                  <th>{dict.explore.industry}</th>
-                  <th>{dict.explore.location}</th>
-                  <th>{dict.explore.status}</th>
-                  <th className="ta-right">{dict.explore.revenue}</th>
-                  <th className="ta-right">{dict.explore.growth}</th>
-                  <th className="ta-right">{dict.explore.deals}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((c) => (
-                  <tr
-                    key={c.id}
-                    className="is-clickable"
-                    onClick={() => openCompany(c)}
-                  >
-                    <td>
-                      <span className="cell-user">
-                        <CompanyLogo name={c.name} color={c.logo} size={30} />
-                        <span>
-                          <div className="cell-strong">{c.name}</div>
-                          <div className="cell-sub">{c.website}</div>
-                        </span>
-                      </span>
-                    </td>
-                    <td>{industryLabel(dict, c.industry)}</td>
-                    <td>
-                      {c.city}, {c.country}
-                    </td>
-                    <td>
-                      <Badge statusKey={c.status}>
-                        {companyStatusLabel(dict, c.status)}
-                      </Badge>
-                    </td>
-                    <td className="ta-right">{fmt.moneyCompact(c.revenue)}</td>
-                    <td className="ta-right">
-                      <span className={c.growth >= 0 ? "pos" : "neg"}>
-                        {fmt.pct(c.growth)}
-                      </span>
-                    </td>
-                    <td className="ta-right">{fmt.digits(c.deals)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="panel panel--table">
+          <DataTable
+            paginate={false}
+            rows={filtered}
+            rowClick={(c) => openCompany(c)}
+            columns={[
+              {
+                key: "name",
+                label: dict.explore.company,
+                render: (c) => (
+                  <span className="cell-user">
+                    <CompanyLogo name={c.name} color={c.logo} size={30} />
+                    <span>
+                      <div className="cell-strong">{c.name}</div>
+                      <div className="cell-sub">{c.website}</div>
+                    </span>
+                  </span>
+                ),
+              },
+              {
+                key: "industry",
+                label: dict.explore.industry,
+                render: (c) => industryLabel(dict, c.industry),
+              },
+              {
+                key: "location",
+                label: dict.explore.location,
+                sortable: false,
+                render: (c) => `${c.city}, ${c.country}`,
+              },
+              {
+                key: "status",
+                label: dict.explore.status,
+                render: (c) => (
+                  <Badge statusKey={c.status}>
+                    {companyStatusLabel(dict, c.status)}
+                  </Badge>
+                ),
+              },
+              {
+                key: "revenue",
+                label: dict.explore.revenue,
+                align: "right",
+                sortVal: (c) => c.revenue,
+                render: (c) => fmt.moneyCompact(c.revenue),
+              },
+              {
+                key: "growth",
+                label: dict.explore.growth,
+                align: "right",
+                sortVal: (c) => c.growth,
+                render: (c) => (
+                  <span className={c.growth >= 0 ? "pos" : "neg"}>
+                    {fmt.pct(c.growth)}
+                  </span>
+                ),
+              },
+              {
+                key: "deals",
+                label: dict.explore.deals,
+                align: "right",
+                sortVal: (c) => c.deals,
+                render: (c) => fmt.digits(c.deals),
+              },
+            ]}
+          />
         </div>
       )}
 
@@ -473,28 +475,28 @@ export function ExplorePage() {
               <div className="tabpane">
                 <p className="drawer-desc">{company.description}</p>
                 <div className="detail-grid">
-                  <Detail label={dict.explore.annualRevenue}>
+                  <DetailRow label={dict.explore.annualRevenue}>
                     <b>{fmt.money(company.revenue)}</b>
-                  </Detail>
-                  <Detail label={dict.explore.growth}>
+                  </DetailRow>
+                  <DetailRow label={dict.explore.growth}>
                     <span className={company.growth >= 0 ? "pos" : "neg"}>
                       {fmt.pct(company.growth)}
                     </span>
-                  </Detail>
-                  <Detail label={dict.explore.companySize}>
+                  </DetailRow>
+                  <DetailRow label={dict.explore.companySize}>
                     {companySizeLabel(dict, company.size)}{" "}
                     {dict.common.employees}
-                  </Detail>
-                  <Detail label={dict.explore.founded}>
+                  </DetailRow>
+                  <DetailRow label={dict.explore.founded}>
                     {fmt.digits(company.founded)}
-                  </Detail>
-                  <Detail label={dict.explore.rating}>
+                  </DetailRow>
+                  <DetailRow label={dict.explore.rating}>
                     <span className="cell-rating">
                       <Stars rating={Number(company.rating)} />
                       <span>{fmt.digits(company.rating)}</span>
                     </span>
-                  </Detail>
-                  <Detail label={dict.explore.website}>
+                  </DetailRow>
+                  <DetailRow label={dict.explore.website}>
                     <a
                       className="link"
                       href={`https://${company.website}`}
@@ -504,7 +506,7 @@ export function ExplorePage() {
                       {company.website}{" "}
                       <Icon name="external-link" size={14} />
                     </a>
-                  </Detail>
+                  </DetailRow>
                 </div>
               </div>
             ) : null}

@@ -11,6 +11,7 @@ import { Stars } from "@/components/ui/Stars";
 import { Segmented } from "@/components/ui/Segmented";
 import { DonutChart } from "@/components/charts/DonutChart";
 import { ChartLegend } from "@/components/charts/ChartLegend";
+import { CHART } from "@/components/charts/palette";
 import { Icon } from "@/lib/icons";
 import { useData } from "@/hooks/useData";
 import { useI18n } from "@/hooks/useI18n";
@@ -82,17 +83,17 @@ export function ReviewsPage() {
     {
       name: sentimentLabel(dict, "positive"),
       value: data.reviews.filter((r) => r.sentiment === "positive").length,
-      color: "#22C55E",
+      color: CHART.up,
     },
     {
       name: sentimentLabel(dict, "neutral"),
       value: data.reviews.filter((r) => r.sentiment === "neutral").length,
-      color: "#F59E0B",
+      color: CHART.warn,
     },
     {
       name: sentimentLabel(dict, "negative"),
       value: data.reviews.filter((r) => r.sentiment === "negative").length,
-      color: "#F2654E",
+      color: CHART.down,
     },
   ];
   const positivePct = data.reviews.length

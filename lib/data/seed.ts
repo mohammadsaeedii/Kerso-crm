@@ -419,16 +419,11 @@ export function createSeedData(locale: Locale): AppData {
   }));
 
   const pipeline = [
-    { stage: "lead" as const, count: 142, value: 86000, color: "#818CF8" },
-    { stage: "qualified" as const, count: 98, value: 142000, color: "#6366F1" },
-    { stage: "proposal" as const, count: 64, value: 121000, color: "#4F46E5" },
-    {
-      stage: "negotiation" as const,
-      count: 38,
-      value: 98000,
-      color: "#4338CA",
-    },
-    { stage: "won" as const, count: 27, value: 120300, color: "#22C55E" },
+    { stage: "lead" as const, count: 142, value: 86000, color: CHART_PALETTE[5] },
+    { stage: "qualified" as const, count: 98, value: 142000, color: CHART.primary },
+    { stage: "proposal" as const, count: 64, value: 121000, color: CHART_PALETTE[0] },
+    { stage: "negotiation" as const, count: 38, value: 98000, color: "var(--indigo-press)" },
+    { stage: "won" as const, count: 27, value: 120300, color: CHART.up },
   ];
 
   const deals: Deal[] = pools.dealNames.map((title, i) => {
@@ -785,11 +780,11 @@ export function createSeedData(locale: Locale): AppData {
       { stage: dict.analytics.funnel.customer, value: 980 },
     ],
     sources: [
-      { name: dict.analytics.sources.organic, value: 38, color: "#4F46E5" },
-      { name: dict.analytics.sources.direct, value: 24, color: "#6366F1" },
-      { name: dict.analytics.sources.referral, value: 18, color: "#818CF8" },
-      { name: dict.analytics.sources.social, value: 12, color: "#22C55E" },
-      { name: dict.analytics.sources.paid, value: 8, color: "#F59E0B" },
+      { name: dict.analytics.sources.organic, value: 38, color: CHART_PALETTE[0] },
+      { name: dict.analytics.sources.direct, value: 24, color: CHART.primary },
+      { name: dict.analytics.sources.referral, value: 18, color: CHART_PALETTE[5] },
+      { name: dict.analytics.sources.social, value: 12, color: CHART_PALETTE[1] },
+      { name: dict.analytics.sources.paid, value: 8, color: CHART_PALETTE[2] },
     ],
     reps:
       locale === "fa"
@@ -822,9 +817,9 @@ export function createSeedData(locale: Locale): AppData {
       { name: dict.analytics.categories.training, value: 19000 },
     ],
     devices: [
-      { name: dict.analytics.devicesMap.desktop, value: 62, color: "#4F46E5" },
-      { name: dict.analytics.devicesMap.mobile, value: 31, color: "#22C55E" },
-      { name: dict.analytics.devicesMap.tablet, value: 7, color: "#F59E0B" },
+      { name: dict.analytics.devicesMap.desktop, value: 62, color: CHART_PALETTE[0] },
+      { name: dict.analytics.devicesMap.mobile, value: 31, color: CHART_PALETTE[1] },
+      { name: dict.analytics.devicesMap.tablet, value: 7, color: CHART_PALETTE[2] },
     ],
     cohort: (() => {
       const r = makeRng(77);
