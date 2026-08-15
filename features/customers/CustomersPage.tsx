@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Modal } from "@/components/ui/Modal";
 import { Drawer } from "@/components/ui/Drawer";
-import { Field } from "@/components/ui/Field";
 import { Tabs } from "@/components/ui/Tabs";
 import { Progress } from "@/components/ui/Progress";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -47,6 +46,11 @@ import { getAppNow } from "@/lib/utils/time";
 import type { AppData, Customer, CustomerStatus, TimelineEvent } from "@/types";
 import type { Dictionary } from "@/lib/i18n/get-dictionary";
 import { cn } from "@/lib/utils/cn";
+import { CustomerForm } from "./CustomerForm";
+import {
+  validateCustomerForm,
+  type CustomerFormValues,
+} from "@/lib/customers/form";
 
 const TIMELINE_ICON: Record<TimelineEvent["type"], IconName> = {
   conversation_created: "message",
@@ -116,7 +120,6 @@ export function CustomersPage({
   const { locale, dict, t, fmt } = useI18n();
   const {
     data,
-    addCustomer,
     updateCustomer,
     removeCustomer,
     removeCustomers,
@@ -133,12 +136,12 @@ export function CustomersPage({
   const [noteText, setNoteText] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<CustomerFormValues>({
     name: "",
     email: "",
     phone: "",
     companyId: "",
-    status: "lead" as CustomerStatus,
+    status: "lead",
     city: "",
     country: "",
   });
@@ -217,29 +220,17 @@ export function CustomersPage({
 
   const closeDrawer = () => setCustomerId(null);
 
-  const openForm = (existing: Customer | null) => {
+  const openForm = (existing: Customer) => {
     setEditing(existing);
-    setForm(
-      existing
-        ? {
-            name: existing.name,
-            email: existing.email,
-            phone: existing.phone,
-            companyId: existing.companyId ?? "",
-            status: existing.status,
-            city: existing.city,
-            country: existing.country,
-          }
-        : {
-            name: "",
-            email: "",
-            phone: "",
-            companyId: "",
-            status: "lead",
-            city: "",
-            country: "",
-          },
-    );
+    setForm({
+      name: existing.name,
+      email: existing.email,
+      phone: existing.phone,
+      companyId: existing.companyId ?? "",
+      status: existing.status,
+      city: existing.city,
+      country: existing.country,
+    });
     setFormErrors({});
     setFormOpen(true);
     setMenu(null);
@@ -247,55 +238,24 @@ export function CustomersPage({
 
   const submitForm = (e?: FormEvent) => {
     e?.preventDefault();
-    const errors: { name?: string; email?: string } = {};
-    if (!form.name.trim()) errors.name = dict.common.validation.required;
-    if (!form.email.trim()) errors.email = dict.common.validation.required;
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      errors.email = dict.common.validation.invalidEmail;
-    }
+    if (!editing) return;
+    const errors = validateCustomerForm(form, dict.common.validation);
     setFormErrors(errors);
     if (Object.keys(errors).length) return;
 
-    const companyId = form.companyId || undefined;
-
-    if (editing) {
-      updateCustomer(editing.id, {
-        name: form.name.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-        companyId,
-        status: form.status,
-        city: form.city.trim() || "—",
-        country: form.country.trim() || "—",
-      });
-      toast(dict.customers.customerUpdated, {
-        type: "success",
-        desc: form.name.trim(),
-      });
-    } else {
-      const row = addCustomer({
-        name: form.name.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-        companyId,
-        status: form.status,
-        city: form.city.trim() || "—",
-        country: form.country.trim() || "—",
-        value: 0,
-        deals: 0,
-        health: 60,
-        avatar: data.avatarColor(),
-        ownerId: data.currentUser.id,
-        tags: ["inbound"],
-        joined: getAppNow(),
-        lastContact: getAppNow(),
-        rating: 5,
-      });
-      toast(dict.customers.customerAdded, {
-        type: "success",
-        desc: row.name,
-      });
-    }
+    updateCustomer(editing.id, {
+      name: form.name.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim(),
+      companyId: form.companyId || undefined,
+      status: form.status,
+      city: form.city.trim() || "—",
+      country: form.country.trim() || "—",
+    });
+    toast(dict.customers.customerUpdated, {
+      type: "success",
+      desc: form.name.trim(),
+    });
     setFormOpen(false);
   };
 
@@ -385,7 +345,9 @@ export function CustomersPage({
             <Button
               variant="primary"
               icon="plus"
-              onClick={() => openForm(null)}
+              onClick={() =>
+                router.push(localizedPath(locale, "/customers/new"))
+              }
             >
               {dict.customers.addCustomer}
             </Button>
@@ -656,9 +618,9 @@ export function CustomersPage({
                 type="button"
                 className="drawer-quick__btn"
                 onClick={() =>
-                  toast(`${dict.customers.call} — ${customer.name}`, {
-                    type: "info",
-                  })
+                  router.push(
+                    localizedPath(locale, `/calls?customer=${customer.id}`),
+                  )
                 }
               >
                 <Icon name="phone" size={18} />
@@ -1132,98 +1094,27 @@ export function CustomersPage({
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title={
-          editing ? dict.customers.editCustomer : dict.customers.addCustomer
-        }
-        subtitle={editing ? editing.name : dict.customers.createSubtitle}
+        title={dict.customers.editCustomer}
+        subtitle={editing?.name}
         footer={
           <>
             <Button onClick={() => setFormOpen(false)}>
               {t("common.cancel")}
             </Button>
             <Button variant="primary" onClick={() => submitForm()}>
-              {editing ? t("common.save") : dict.customers.addCustomer}
+              {t("common.save")}
             </Button>
           </>
         }
       >
-        <form className="form-grid" onSubmit={submitForm}>
-          <Field
-            label={dict.customers.fullName}
-            name="name"
-            required
-            wide
-            placeholder={dict.customers.placeholderName}
-            value={form.name}
-            error={formErrors.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-          />
-          <Field
-            label={dict.customers.email}
-            name="email"
-            type="email"
-            required
-            placeholder={dict.customers.placeholderEmail}
-            value={form.email}
-            error={formErrors.email}
-            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-          />
-          <Field
-            label={dict.customers.phone}
-            name="phone"
-            placeholder={dict.customers.placeholderPhone}
-            value={form.phone}
-            onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-          />
-          <Field
-            as="select"
-            label={dict.customers.company}
-            name="company"
-            options={[
-              { value: "", label: dict.customers.noCompany },
-              ...data.companies.map((c) => ({
-                value: c.id,
-                label: c.name,
-              })),
-            ]}
-            value={form.companyId}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, companyId: e.target.value }))
-            }
-          />
-          <Field
-            as="select"
-            label={dict.customers.status}
-            name="status"
-            options={data.CUST_STATUS.map((s) => ({
-              value: s,
-              label: customerStatusLabel(dict, s),
-            }))}
-            value={form.status}
-            onChange={(e) =>
-              setForm((f) => ({
-                ...f,
-                status: e.target.value as CustomerStatus,
-              }))
-            }
-          />
-          <Field
-            label={dict.customers.city}
-            name="city"
-            placeholder={dict.customers.placeholderCity}
-            value={form.city}
-            onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-          />
-          <Field
-            label={dict.customers.country}
-            name="country"
-            placeholder={dict.customers.placeholderCountry}
-            value={form.country}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, country: e.target.value }))
-            }
-          />
-        </form>
+        <CustomerForm
+          value={form}
+          errors={formErrors}
+          companies={data.companies}
+          statuses={data.CUST_STATUS}
+          onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+          onSubmit={(e) => submitForm(e)}
+        />
       </Modal>
 
       <ConfirmDialog

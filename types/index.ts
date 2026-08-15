@@ -284,6 +284,24 @@ export type ConversationStatus = "open" | "pending" | "closed";
 
 export type ConversationChannel = "email" | "chat" | "whatsapp";
 
+export type CallDirection = "inbound" | "outbound";
+
+export type CallStatus = "completed" | "missed" | "voicemail";
+
+export type CallRecording = {
+  id: string;
+  customerId: string;
+  agentId?: string;
+  direction: CallDirection;
+  status: CallStatus;
+  subject: string;
+  startedAt: Date;
+  durationSec: number;
+  recordingUrl: string;
+  transcript: string;
+  summary: string | null;
+};
+
 export type MessageRole = "customer" | "agent" | "ai" | "note" | "system";
 
 export type ConversationMessage = {
@@ -441,6 +459,7 @@ export type AppData = {
   notifications: Notification[];
   messages: Message[];
   conversations: Conversation[];
+  calls: CallRecording[];
   tickets: Ticket[];
   kbArticles: KbArticle[];
   automations: AutomationRule[];

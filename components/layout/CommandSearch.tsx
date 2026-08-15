@@ -28,6 +28,8 @@ type SearchItem = {
 const PAGES: { id: string; icon: IconName; labelKey: string }[] = [
   { id: "inbox", icon: "inbox", labelKey: "nav.inbox" },
   { id: "customers", icon: "customers", labelKey: "nav.customers" },
+  { id: "customers/new", icon: "plus", labelKey: "customers.addCustomer" },
+  { id: "calls", icon: "phone-call", labelKey: "nav.calls" },
   { id: "tickets", icon: "ticket", labelKey: "nav.tickets" },
   { id: "ai", icon: "bot", labelKey: "nav.ai" },
   { id: "knowledge", icon: "book", labelKey: "nav.knowledge" },

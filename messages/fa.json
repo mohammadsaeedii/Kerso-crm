@@ -9,6 +9,7 @@
     "inbox": "صندوق ورودی",
     "customers": "مشتریان",
     "tickets": "تیکت‌ها",
+    "calls": "تماس‌ها",
     "ai": "دستیار AI",
     "knowledge": "دانشنامه",
     "automations": "اتوماسیون",
@@ -390,6 +391,7 @@
     "title": "مشتریان",
     "sub": "{count} مشتری در مجموع",
     "addCustomer": "افزودن مشتری",
+    "backToList": "بازگشت به مشتریان",
     "editCustomer": "ویرایش مشتری",
     "createSubtitle": "ایجاد رکورد مشتری جدید",
     "search": "جستجو بر اساس نام، ایمیل، شرکت…",
@@ -675,6 +677,46 @@
     "hideContext": "پنهان کردن جزئیات",
     "openCount": "{count} باز",
     "composerModes": "حالت نوشتن"
+  },
+  "callsPage": {
+    "title": "تماس‌ها",
+    "subtitle": "تماس‌های ضبط‌شدهٔ مشتریان و خلاصهٔ هوش مصنوعی",
+    "search": "جستجوی تماس یا مشتری…",
+    "empty": "تماس ضبط‌شده‌ای نیست",
+    "emptyDesc": "فیلتر یا جستجوی دیگری را امتحان کنید.",
+    "select": "یک تماس را انتخاب کنید",
+    "selectDesc": "از فهرست یک ضبط را برای پخش و خلاصه انتخاب کنید.",
+    "recording": "ضبط تماس",
+    "noRecording": "ضبطی موجود نیست",
+    "noRecordingDesc": "تماس‌های بی‌پاسخ فایل صوتی ندارند.",
+    "transcript": "رونوشت",
+    "noTranscript": "رونوشتی برای این تماس نیست.",
+    "summary": "خلاصه",
+    "summarize": "خلاصه کردن تماس",
+    "summarizing": "در حال خلاصه‌سازی…",
+    "play": "پخش ضبط",
+    "pause": "مکث",
+    "summarized": "تماس خلاصه شد",
+    "summarizeHint": "از روی رونوشت، خلاصهٔ هوش مصنوعی بسازید.",
+    "openCustomer": "باز کردن مشتری",
+    "duration": "مدت",
+    "back": "بازگشت",
+    "count": "{count} تماس",
+    "filters": {
+      "all": "همه",
+      "inbound": "ورودی",
+      "outbound": "خروجی",
+      "missed": "بی‌پاسخ"
+    },
+    "direction": {
+      "inbound": "ورودی",
+      "outbound": "خروجی"
+    },
+    "status": {
+      "completed": "انجام‌شده",
+      "missed": "بی‌پاسخ",
+      "voicemail": "پیام صوتی"
+    }
   },
   "ticketsPage": {
     "title": "تیکت‌ها",

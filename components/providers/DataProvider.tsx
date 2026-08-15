@@ -26,6 +26,7 @@ import type {
   AiAgentState,
   AppData,
   AutomationRule,
+  CallRecording,
   Company,
   Conversation,
   ConversationMessage,
@@ -83,6 +84,7 @@ export type DataContextValue = {
   addKbArticle: (a: Omit<KbArticle, "id"> & { id?: string }) => KbArticle;
   toggleAutomation: (id: string) => void;
   updateAiAgent: (patch: Partial<AiAgentState>) => void;
+  updateCall: (id: string, patch: Partial<CallRecording>) => void;
 };
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -482,6 +484,13 @@ export function DataProvider({
     }));
   }, []);
 
+  const updateCall = useCallback((id: string, patch: Partial<CallRecording>) => {
+    setData((d) => ({
+      ...d,
+      calls: d.calls.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+    }));
+  }, []);
+
   const value = useMemo<DataContextValue>(
     () => ({
       data,
@@ -517,6 +526,7 @@ export function DataProvider({
       addKbArticle,
       toggleAutomation,
       updateAiAgent,
+      updateCall,
     }),
     [
       data,
@@ -551,6 +561,7 @@ export function DataProvider({
       addKbArticle,
       toggleAutomation,
       updateAiAgent,
+      updateCall,
     ],
   );
 

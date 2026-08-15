@@ -11,6 +11,7 @@ import {
   monthLabel,
 } from "@/lib/data/labels";
 import { createSupportSeed } from "@/lib/data/support-seed";
+import { createCallsSeed } from "@/lib/data/calls-seed";
 import { recountStats } from "@/lib/data/relations";
 import { buildSeedTimeline } from "@/lib/data/timeline";
 import { CHART, CHART_PALETTE } from "@/components/charts/palette";
@@ -914,6 +915,7 @@ export function createSeedData(locale: Locale): AppData {
   ];
 
   const support = createSupportSeed(locale, customers, currentUser.name);
+  const calls = createCallsSeed(locale, customers, currentUser.id);
 
   const notes: Note[] =
     locale === "fa"
@@ -982,6 +984,7 @@ export function createSeedData(locale: Locale): AppData {
     notifications,
     messages,
     conversations: support.conversations,
+    calls,
     tickets: support.tickets,
     kbArticles: support.kbArticles,
     automations: support.automations,

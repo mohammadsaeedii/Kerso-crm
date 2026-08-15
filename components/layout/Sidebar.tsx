@@ -27,6 +27,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onNavigate }: SidebarProp
   const primary: NavItem[] = [
     { id: "inbox", href: "/inbox", icon: "inbox", label: dict.nav.inbox },
     { id: "customers", href: "/customers", icon: "customers", label: dict.nav.customers },
+    { id: "calls", href: "/calls", icon: "phone-call", label: dict.nav.calls },
     { id: "tickets", href: "/tickets", icon: "ticket", label: dict.nav.tickets },
     { id: "ai", href: "/ai", icon: "bot", label: dict.nav.ai },
     { id: "knowledge", href: "/knowledge", icon: "book", label: dict.nav.knowledge },

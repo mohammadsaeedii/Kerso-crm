@@ -9,6 +9,7 @@
     "inbox": "Inbox",
     "customers": "Customers",
     "tickets": "Tickets",
+    "calls": "Calls",
     "ai": "AI Agent",
     "knowledge": "Knowledge",
     "automations": "Automations",
@@ -390,6 +391,7 @@
     "title": "Customers",
     "sub": "{count} total customers",
     "addCustomer": "Add customer",
+    "backToList": "Back to customers",
     "editCustomer": "Edit customer",
     "createSubtitle": "Create a new customer record",
     "search": "Search by name, email, company…",
@@ -675,6 +677,46 @@
     "hideContext": "Hide details",
     "openCount": "{count} open",
     "composerModes": "Composer mode"
+  },
+  "callsPage": {
+    "title": "Calls",
+    "subtitle": "Recorded customer calls and AI summaries",
+    "search": "Search calls or customers…",
+    "empty": "No recorded calls",
+    "emptyDesc": "Try another filter or search.",
+    "select": "Select a call",
+    "selectDesc": "Pick a recording from the list to play and summarize.",
+    "recording": "Recording",
+    "noRecording": "No recording available",
+    "noRecordingDesc": "Missed calls do not have audio.",
+    "transcript": "Transcript",
+    "noTranscript": "No transcript for this call.",
+    "summary": "Summary",
+    "summarize": "Summarize call",
+    "summarizing": "Summarizing…",
+    "play": "Play recording",
+    "pause": "Pause",
+    "summarized": "Call summarized",
+    "summarizeHint": "Generate an AI summary from the transcript.",
+    "openCustomer": "Open customer",
+    "duration": "Duration",
+    "back": "Back",
+    "count": "{count} calls",
+    "filters": {
+      "all": "All",
+      "inbound": "Inbound",
+      "outbound": "Outbound",
+      "missed": "Missed"
+    },
+    "direction": {
+      "inbound": "Inbound",
+      "outbound": "Outbound"
+    },
+    "status": {
+      "completed": "Completed",
+      "missed": "Missed",
+      "voicemail": "Voicemail"
+    }
   },
   "ticketsPage": {
     "title": "Tickets",

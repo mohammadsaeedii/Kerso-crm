@@ -1,6 +1,7 @@
 import type {
   AppData,
   AvatarColor,
+  CallRecording,
   Company,
   Customer,
   Deal,
@@ -64,6 +65,16 @@ export function customersForCompany(
   companyId: string,
 ): Customer[] {
   return customers.filter((c) => c.companyId === companyId);
+}
+
+export function callsForCustomer(
+  calls: CallRecording[],
+  customerId: string,
+): CallRecording[] {
+  return calls
+    .filter((c) => c.customerId === customerId)
+    .slice()
+    .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
 }
 
 export function notesForCustomer(notes: Note[], customerId: string): Note[] {

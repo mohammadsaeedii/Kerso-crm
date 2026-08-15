@@ -58,8 +58,13 @@ import {
   PanelLeft,
   PanelRight,
   Paperclip,
+  Pause,
   Pencil,
   Phone,
+  PhoneCall,
+  PhoneIncoming,
+  PhoneOutgoing,
+  Play,
   Plus,
   RefreshCw,
   Search,
@@ -168,6 +173,11 @@ const ICONS = {
   shield: Shield,
   palette: Palette,
   paperclip: Paperclip,
+  pause: Pause,
+  play: Play,
+  "phone-call": PhoneCall,
+  "phone-incoming": PhoneIncoming,
+  "phone-outgoing": PhoneOutgoing,
 } as const;
 
 export type IconName = keyof typeof ICONS;

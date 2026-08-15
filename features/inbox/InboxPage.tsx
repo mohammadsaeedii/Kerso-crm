@@ -46,7 +46,7 @@ export function InboxPage({
   const [draft, setDraft] = useState("");
   const [mobilePane, setMobilePane] = useState<MobilePane>("list");
   const [contextOpen, setContextOpen] = useState(true);
-  const threadEndRef = useRef<HTMLDivElement>(null);
+  const threadBodyRef = useRef<HTMLDivElement>(null);
 
   const agentName = data.currentUser.name;
   const aiName = data.aiAgent.name;
@@ -112,7 +112,9 @@ export function InboxPage({
   }, [data.tickets, customer]);
 
   useEffect(() => {
-    threadEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = threadBodyRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
   }, [selected?.messages.length, conversationId]);
 
   const counts = useMemo(() => {
@@ -348,7 +350,7 @@ export function InboxPage({
               </div>
             </header>
 
-            <div className="thread-body">
+            <div className="thread-body" ref={threadBodyRef}>
               {selected.messages.map((m) => (
                 <MessageBubble
                   key={m.id}
@@ -359,7 +361,6 @@ export function InboxPage({
                   roleLabel={dict.inbox.role[m.role]}
                 />
               ))}
-              <div ref={threadEndRef} />
             </div>
 
             <footer className="composer">

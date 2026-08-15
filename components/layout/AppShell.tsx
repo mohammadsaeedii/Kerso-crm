@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils/cn";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const isWorkspace = /\/(inbox)(\/|$)/.test(pathname);
+  const isWorkspace = /\/(inbox|calls)(\/|$)/.test(pathname);
 
   const [collapsed, setCollapsed] = useState(() =>
     typeof window === "undefined" ? false : store.get("sidebar:collapsed", false),
